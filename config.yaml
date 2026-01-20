@@ -1,0 +1,20 @@
+gee:
+  project: "landler-open-data"
+  asset_root: "projects/landler-open-data/assets/eii"
+  version: "v1"
+
+structure:
+  products: "products"
+  intermediate: "intermediate"
+
+modules:
+  functional: "functional"
+  structural: "structural"
+  compositional: "compositional"
+
+folders:
+  training: "training"
+  models: "models"
+  predictions: "predictions"
+  grid: "grid"
+  validation: "validation"

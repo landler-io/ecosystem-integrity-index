@@ -1,0 +1,25 @@
+# Structural Integrity Pipeline Configuration
+#
+# These parameters are used for global production of structural integrity layers.
+# See .ai_resources/DISCUSSION_CONNECTIVITY.md for literature justification.
+
+# Data source
+hmi_asset: "projects/sat-io/open-datasets/GHM/HM_2022_300M"
+
+# Core area parameters
+edge_depth_m: 300           # Edge effect penetration depth (Ries et al., 2004)
+neighborhood_m: 5000        # Landscape analysis radius (Miguet et al., 2016)
+hmi_threshold: 0.4          # Habitat classification threshold (Kennedy et al., 2019)
+
+# Quality class weights
+# HMI ranges: <0.1 (pristine), 0.1-0.2 (low-impact), 0.2-0.3 (moderate), 0.3-0.4 (semi-natural)
+quality_thresholds: [0.1, 0.2, 0.3, 0.4]
+quality_weights: [4, 3, 2, 1]
+max_quality_weight: 4
+
+# Export settings
+scale_m: 300                # Native HMI resolution
+tile_size_deg: 10.0
+min_lat: -60
+max_lat: 80
+max_tiles_per_batch: 3000

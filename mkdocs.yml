@@ -1,0 +1,85 @@
+site_name: Ecosystem Integrity Index
+site_description: A global index quantifying ecosystem integrity based on deviation from natural potential NPP
+site_url: https://landler-io.github.io/ecosystem-integrity-index/
+repo_url: https://github.com/landler-io/ecosystem-integrity-index
+repo_name: ecosystem-integrity-index
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            heading_level: 3
+  - mkdocs-jupyter:
+      include_source: true
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Methodology:
+      - Overview: methodology/index.md
+      - Functional Integrity: methodology/functional_integrity.md
+      - Structural Integrity: methodology/structural_integrity.md
+      - Compositional Integrity: methodology/compositional_integrity.md
+      - Ecosystem Integrity Index: methodology/ecosystem_integrity.md
+      - Local Modulation: methodology/local_modulation.md
+      - Data & Assets: data-assets.md
+  - Limitations & Roadmap: limitations.md
+  - API Reference:
+      - Overview: api/index.md
+      - eii.client: api/client.md
+      - eii.client.analysis: api/analysis.md
+      - eii.compute: api/compute.md
+      - eii.training: api/training.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/landler-io/ecosystem-integrity-index
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
