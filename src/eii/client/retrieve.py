@@ -251,12 +251,22 @@ def _reduce_area_stats(
     if stats is None:
         stats = ["mean"]
     reducer = _build_reducer(stats, percentiles)
-    return image.reduceRegion(
+    result = image.reduceRegion(
         reducer=reducer,
         geometry=geometry,
         scale=scale,
         maxPixels=1e12,
     )
+    # sub-pixel polygons have no pixel centers inside, so reduceRegion returns
+    # all nulls. Fall back to sampling at the centroid with the same reducer.
+    has_data = result.values().reduce(ee.Reducer.count())
+    centroid_result = image.reduceRegion(
+        reducer=reducer,
+        geometry=geometry.centroid(maxError=1),
+        scale=scale,
+        maxPixels=1e12,
+    )
+    return ee.Algorithms.If(has_data, result, centroid_result)
 
 
 def _format_stats(
@@ -388,7 +398,10 @@ def _download_image_to_geotiff(
     tmp_dir = Path(tempfile.mkdtemp())
     try:
         tmp_download = tmp_dir / "download"
-        with urllib.request.urlopen(url) as response, open(tmp_download, "wb") as handle:
+        with (
+            urllib.request.urlopen(url) as response,
+            open(tmp_download, "wb") as handle,
+        ):
             handle.write(response.read())
 
         if zipfile.is_zipfile(tmp_download):
