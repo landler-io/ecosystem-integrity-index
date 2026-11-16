@@ -1,0 +1,36 @@
+{
+ "product": "EII v2.0.0",
+ "collection": "projects/landler-open-data/assets/products/eii/v2_0/release/global",
+ "collection_note": "one image per 10 degree tile and reference year (property reference_year)",
+ "reference_years": [
+  2021,
+  2025
+ ],
+ "comparison_year": 2021,
+ "wcmc_year": 2020,
+ "seed": 42,
+ "n_points": 500000,
+ "sampling_grid": "Eckert IV (ESRI:54012) 1 km, area average of valid source pixels",
+ "comparison_grid": "WCMC EII_2020_1km.tif grid (EPSG:4326), cos(latitude) area weights",
+ "product_tags": {
+  "bii": "datasets/bii/v1_1",
+  "fi_change_constants_sha256": "{\"drift_factors.csv\": \"0b58e318849bcbe05996fde5613f3f9992924666267793173fa7eb3a1c9fe9df\", \"h_model_TV.txt\": \"d2527506b5c0090a57ddb292bf05d13b83ad2e453180e80794e2f9eaece4bf44\", \"h_model_TNc.txt\": \"6fdbd899754c072cdd80e3a090fcd777f0ebfc8975a6f7816674c7c533fd4231\", \"h_model_Nc.txt\": \"fed699c403e704228bfe35fa62505e191b53a6d7ee911794436475836567c422\", \"k_c.json\": \"2648c961d452c927ad2d3b9bddd0c0abba14af0b60022a28f2461ad0297393bf\"}",
+  "fi_change_k": "1.0",
+  "fi_change_series": "TV",
+  "fi_formula": "deviation_tolerance",
+  "glwd": "GLWD v2.0",
+  "hmi": "HMv20240801_2022s_AA_300.tif",
+  "natural_cv": "interannual_cv model",
+  "npp": "CLMS DMP 300m V2.0.2 RT6 annual sums",
+  "potential_npp_floor": "50.0",
+  "recentring": "hmi_bii",
+  "recentring_factors": "{\"1\": 0.9804, \"2\": 0.9949, \"3\": 1.024, \"4\": 0.9557, \"5\": 0.9548, \"6\": 0.9348, \"7\": 0.9219, \"8\": 0.887, \"9\": 0.9358, \"10\": 0.9261, \"11\": 0.9559, \"12\": 1.0348, \"13\": 0.8238, \"14\": 0.9389}",
+  "recentring_min_reference_pixels": "200",
+  "recentring_trim": "0.0",
+  "structural_quality_midpoint": "0.4",
+  "structural_version": "v2",
+  "surplus_zero": "2.0",
+  "tolerance_k": "1.0",
+  "tolerance_k_surplus": "1.5"
+ }
+}

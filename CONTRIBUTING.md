@@ -4,7 +4,6 @@ Thank you for your interest in contributing to the Ecosystem Integrity Index pro
 
 ## Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [How to Contribute](#how-to-contribute)
 - [Development Setup](#development-setup)
@@ -12,10 +11,6 @@ Thank you for your interest in contributing to the Ecosystem Integrity Index pro
 - [Style Guidelines](#style-guidelines)
 - [Testing](#testing)
 - [Documentation](#documentation)
-
-## Code of Conduct
-
-This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the maintainers.
 
 ## Getting Started
 
@@ -62,7 +57,7 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 ### Prerequisites
 
 - Python 3.10 or higher
-- Google Earth Engine account (for running tests with GEE)
+- A Google Earth Engine account, for the client examples (the test suite mocks Earth Engine)
 
 ### Installation
 
@@ -92,7 +87,7 @@ pytest
 pytest --cov=eii
 
 # Run specific test file
-pytest tests/test_gee/test_eii.py
+pytest tests/test_compute/test_compute.py
 ```
 
 ### Building Documentation
@@ -101,8 +96,8 @@ pytest tests/test_gee/test_eii.py
 # Serve documentation locally
 mkdocs serve
 
-# Build documentation
-mkdocs build
+# Build documentation (as CI does)
+mkdocs build --strict
 ```
 
 ## Pull Request Process
@@ -163,15 +158,9 @@ def get_eii_for_polygon(
 
     Example:
         >>> polygon = ee.Geometry.Rectangle([-60, -10, -55, -5])
-        >>> stats = get_eii_for_polygon(polygon, 2020)
+        >>> stats = get_eii_for_polygon(polygon, 2024)
     """
 ```
-
-### JavaScript (Earth Engine)
-
-- Use consistent indentation (2 spaces)
-- Document functions with JSDoc comments
-- Use meaningful variable names
 
 ### Documentation
 
@@ -192,11 +181,9 @@ def get_eii_for_polygon(
 ```
 tests/
 ├── conftest.py          # Shared fixtures
-├── test_gee/            # GEE-related tests
-│   ├── test_eii.py
-│   └── test_npp.py
-└── test_analysis/       # Analysis module tests
-    └── test_zonal_stats.py
+├── test_client/         # eii.client (Earth Engine mocked)
+├── test_compute/        # eii.compute on numpy arrays
+└── test_pipelines/      # pipeline helpers
 ```
 
 ### Mocking Earth Engine
@@ -217,7 +204,7 @@ def test_something(mock_image):
 ### Structure
 
 - `docs/`: Main documentation source
-- `notebooks/`: Jupyter notebooks (also rendered in docs)
+- `notebooks/`: example Jupyter notebooks (not part of the documentation site)
 - Docstrings: API documentation (auto-generated)
 
 ### Building Locally
@@ -236,4 +223,4 @@ If you have questions about contributing, feel free to:
 - Ask in an Issue
 - Contact the maintainers
 
-Thank you for contributing! 🌍
+Thank you for contributing.

@@ -17,152 +17,98 @@ from typing import Literal
 
 import ee
 
-from eii.compute.compositional import calculate_compositional_integrity
-from eii.compute.integrity import combine_components
-from eii.compute.npp import calculate_functional_integrity
-from eii.compute.settings import (
-    NATURAL_NPP_ASSET_PATH,
-    OBSERVED_NPP_ASSET_PATH,
-    OBSERVED_NPP_YEAR_RANGE,
-)
+from eii.compute.settings import REFERENCE_YEARS
 
-from .assets import get_asset_path
+from .assets import get_asset_path, resolve_version
 from .utils import normalize_client_input
 
-DEFAULT_BII_YEAR = 2020
-
-
-AggregationMethod = Literal["min_fuzzy_logic", "minimum", "product", "geometric_mean"]
-ComputeMode = Literal["precomputed", "on_the_fly"]
 OutputFormat = Literal["dict", "geodataframe"]
-LayerSelection = Literal["eii", "components", "all"]
+LayerSelection = Literal[
+    "eii", "components", "all", "limiting_component", "wetland_flag", "fi_change"
+]
+CATEGORICAL_BANDS = ("limiting_component", "wetland_flag")
+FI_CHANGE_BANDS = ("fi_state", "fi_change", "fi_change_sensors")
+COMPONENT_BANDS = {
+    "functional": "functional_integrity",
+    "structural": "structural_integrity",
+    "compositional": "compositional_integrity",
+}
 
 
 def get_layers(
     layers: LayerSelection = "all",
-    aggregation_method: AggregationMethod = "min_fuzzy_logic",
-    compute_mode: ComputeMode = "precomputed",
-    geometry: ee.Geometry | None = None,
-    npp_year_range: list[str] = OBSERVED_NPP_YEAR_RANGE,
-    include_seasonality: bool = True,
-    natural_npp_asset_path: str = NATURAL_NPP_ASSET_PATH,
-    observed_npp_asset_path: str = OBSERVED_NPP_ASSET_PATH,
-    structural_asset_path: str | None = None,
-    bii_year: int = DEFAULT_BII_YEAR,
-    absolute_diff_percentile: str = "p95",
+    version: str | None = None,
+    reference_year: int | None = None,
 ) -> dict[str, ee.Image]:
     """
-    Get EII and/or component layers for a given geometry and computation mode.
+    Get pre-computed EII and/or component layers.
 
     Args:
-        layers: Which layers to return: "eii", "components", or "all".
-        aggregation_method: EII aggregation method.
-        compute_mode: "precomputed" (default) or "on_the_fly".
-        geometry: Optional geometry for on-the-fly component calculation.
-        npp_year_range: Date range for observed NPP (on-the-fly mode).
-        include_seasonality: Include seasonality in functional integrity.
-        natural_npp_asset_path: Asset for pre-computed natural NPP.
-        observed_npp_asset_path: Asset for observed NPP annual tiles.
-        structural_asset_path: Asset for structural integrity core area.
-        bii_year: BII year to select for compositional integrity.
-        absolute_diff_percentile: Percentile key for NPP absolute difference penalty.
+        layers: Which layers to return: "eii", "components", "all",
+            "limiting_component" or "wetland_flag" (both v2 only). "all" includes
+            both in v2. "fi_change" (v2 only, not part of "all") returns the
+            parts of functional integrity: "fi_state", "fi_change" and "fi_change_sensors".
+        version: EII dataset version (e.g. "v1", "v2"). If None, uses the active
+            session version (see eii.client.set_version), defaulting to config.yaml.
+        reference_year: v2 reference year, one of REFERENCE_YEARS (observed NPP of the 3
+            years ending in it and BII of that year). Defaults to the latest year; pass it
+            explicitly for reproducible results. Not used for v1.
 
     Returns:
         Dictionary of Earth Engine images. Keys include "eii" and/or component
-        names ("functional", "structural", "compositional").
+        names ("functional", "structural", "compositional"). Version v2 also
+        exposes "limiting_component": 1 = functional, 2 = structural,
+        3 = compositional. Ties prefer functional, then structural. It also exposes
+        "wetland_flag": 0 = none, 1 = wetland, 2 = peatland, 3 = mangrove, where
+        potential NPP and so functional integrity are less reliable.
+        With layers="fi_change": "fi_state" (observed against potential NPP),
+        "fi_change" (EVI change against the pixel's baseline, masked where no sensor
+        serves) and "fi_change_sensors" (uint8, 0-2 sensors; 0 where functional
+        integrity equals fi_state). "functional" is fi_state x fi_change.
 
     Example:
-        >>> layers = get_layers(layers="all")
+        >>> layers = get_layers(layers="all", version="v2", reference_year=2024)
         >>> eii = layers["eii"].clip(my_polygon)
     """
-    if geometry is not None:
-        geometry = normalize_client_input(geometry, target="geometry")
-
-    if compute_mode == "precomputed" and aggregation_method != "min_fuzzy_logic":
+    version = resolve_version(version)
+    if layers not in ("eii", "components", "all", "fi_change", *CATEGORICAL_BANDS):
         raise ValueError(
-            "Only the pre-computed default method is available. "
-            "Use compute_mode='on_the_fly' for other aggregation methods."
+            "layers must be one of: 'eii', 'components', 'all', 'limiting_component', "
+            "'wetland_flag', 'fi_change'"
         )
-
-    include_eii = layers in ("eii", "all")
-    include_components = layers in ("components", "all")
+    if layers in (*CATEGORICAL_BANDS, "fi_change") and version != "v2":
+        raise ValueError(f"{layers} is available only for version='v2'")
+    image = _release_image(version, reference_year)
 
     result: dict[str, ee.Image] = {}
-    components: dict[str, ee.Image] | None = None
-
-    if include_components:
-        if compute_mode == "precomputed":
-            mosaic = ee.Image(get_asset_path("components"))
-            components = {
-                "functional": mosaic.select("functional_integrity"),
-                "structural": mosaic.select("structural_integrity"),
-                "compositional": mosaic.select("compositional_integrity"),
-            }
-        elif compute_mode == "on_the_fly":
-            functional_result = calculate_functional_integrity(
-                aoi=geometry,
-                year_range=npp_year_range,
-                include_seasonality=include_seasonality,
-                natural_npp_asset_path=natural_npp_asset_path,
-                observed_npp_asset_path=observed_npp_asset_path,
-                absolute_diff_percentile=absolute_diff_percentile,
-            )
-            structural = _get_structural_integrity_precomputed(
-                aoi=geometry,
-                asset_path=structural_asset_path,
-            )
-            compositional = calculate_compositional_integrity(aoi=geometry, year=bii_year)
-            components = {
-                "functional": functional_result["functional_integrity"],
-                "structural": structural,
-                "compositional": compositional,
-            }
-        else:
-            raise ValueError("compute_mode must be one of: 'precomputed', 'on_the_fly'")
-
-        result.update(components)
-
-    if include_eii:
-        if compute_mode == "precomputed":
-            result["eii"] = ee.Image(get_asset_path("eii")).select("eii")
-        else:
-            if components is None:
-                components = get_layers(
-                    layers="components",
-                    aggregation_method=aggregation_method,
-                    compute_mode=compute_mode,
-                    geometry=geometry,
-                    npp_year_range=npp_year_range,
-                    include_seasonality=include_seasonality,
-                    natural_npp_asset_path=natural_npp_asset_path,
-                    observed_npp_asset_path=observed_npp_asset_path,
-                    structural_asset_path=structural_asset_path,
-                    bii_year=bii_year,
-                    absolute_diff_percentile=absolute_diff_percentile,
-                )
-            result["eii"] = combine_components(
-                functional=components["functional"],
-                structural=components["structural"],
-                compositional=components["compositional"],
-                method=aggregation_method,
-            ).rename("eii")
-
+    if layers in ("eii", "all"):
+        result["eii"] = image.select("eii")
+    if layers in ("components", "all"):
+        result.update({name: image.select(band) for name, band in COMPONENT_BANDS.items()})
+    for band in CATEGORICAL_BANDS:
+        if version == "v2" and layers in (band, "all"):
+            result[band] = image.select(band)
+    if layers == "fi_change":
+        result.update({band: image.select(band) for band in FI_CHANGE_BANDS})
+        # float32 in the tile (one GeoTIFF data type), a sensor count 0-2
+        result["fi_change_sensors"] = result["fi_change_sensors"].toUint8()
     return result
 
 
-def _get_structural_integrity_precomputed(
-    aoi: ee.Geometry | None = None,
-    asset_path: str | None = None,
-) -> ee.Image:
-    """Load pre-computed structural integrity (core area) image."""
-    if asset_path is None:
-        asset_path = get_asset_path("structural_core_area")
-
-    structural = ee.Image(asset_path).rename("structural_integrity")
-    if aoi is not None:
-        structural = structural.clip(aoi)
-
-    return structural
+def _release_image(version: str, reference_year: int | None) -> ee.Image:
+    """The released multiband EII image: v1 is static, v2 has one mosaic per reference year."""
+    if version != "v2":
+        if reference_year is not None:
+            raise ValueError("reference_year applies to version='v2' only")
+        image: ee.Image = ee.Image(get_asset_path("eii", version))
+        return image
+    if reference_year is None:
+        reference_year = REFERENCE_YEARS[-1]
+    if reference_year not in REFERENCE_YEARS:
+        raise ValueError(f"reference_year must be one of {list(REFERENCE_YEARS)}")
+    collection = ee.ImageCollection(get_asset_path("eii", version))
+    mosaic: ee.Image = collection.filter(ee.Filter.eq("reference_year", reference_year)).mosaic()
+    return mosaic
 
 
 def _is_point_geometry(geometry: ee.Geometry) -> ee.Boolean:
@@ -563,20 +509,14 @@ def _stream_tiles_to_geotiff(
 
 def get_stats(
     geometry: ee.Geometry,
-    aggregation_method: AggregationMethod = "min_fuzzy_logic",
     include_components: bool = True,
     scale: int = 300,
     stats: list[str] | None = None,
     percentiles: list[int] | None = None,
-    compute_mode: ComputeMode = "precomputed",
-    npp_year_range: list[str] = OBSERVED_NPP_YEAR_RANGE,
-    include_seasonality: bool = True,
-    natural_npp_asset_path: str = NATURAL_NPP_ASSET_PATH,
-    observed_npp_asset_path: str = OBSERVED_NPP_ASSET_PATH,
-    structural_asset_path: str | None = None,
-    bii_year: int = DEFAULT_BII_YEAR,
-    absolute_diff_percentile: str = "p95",
     output_format: OutputFormat = "dict",
+    version: str | None = None,
+    reference_year: int | None = None,
+    exclude_wetlands: bool = False,
 ):
     """
     Extract EII values or statistics for a given geometry.
@@ -584,27 +524,26 @@ def get_stats(
     Args:
         geometry: AOI geometry (ee.Geometry/Feature/FeatureCollection, GeoPandas,
             shapely, or bbox tuple).
-        aggregation_method: EII aggregation method. Defaults to "min_fuzzy_logic".
         include_components: If True, include statistics for functional,
             structural, and compositional integrity. Defaults to True.
         scale: Resolution in meters for the reduction. Defaults to 300.
         stats: Statistics to compute. Supported: "mean", "median", "min", "max",
             "std". Defaults to ["mean"].
         percentiles: Optional list of percentiles (0-100) to include.
-        compute_mode: "precomputed" (default) or "on_the_fly".
-        npp_year_range: Date range for observed NPP (on-the-fly mode).
-        include_seasonality: Include seasonality in functional integrity.
-        natural_npp_asset_path: Asset for pre-computed natural NPP.
-        observed_npp_asset_path: Asset for observed NPP annual tiles.
-        structural_asset_path: Asset for structural integrity core area.
-        bii_year: BII year to select for compositional integrity.
-        absolute_diff_percentile: Percentile key for NPP absolute difference penalty.
+        reference_year: v2 reference year, defaults to the latest; see ``get_layers``.
         output_format: "dict" (default) or "geodataframe".
+        version: EII dataset version (e.g. "v1", "v2"). If None, uses the active
+            session version (see eii.client.set_version), defaulting to config.yaml.
+        exclude_wetlands: v2 only. Mask pixels with a nonzero ``wetland_flag``
+            before the reduction. By default flagged pixels are only reported.
 
     Returns:
         A structured dictionary or GeoDataFrame depending on output_format.
         Point geometries return single values; area geometries return summary
         statistics in nested format: {"eii": {"mean": ..., "min": ...}}.
+        Version v2 adds "wetland_flag": the flag code at a point, or
+        {"share": ...}, the flagged share of valid EII pixels, for an area
+        (computed before any exclusion).
 
     Example:
         >>> import ee
@@ -614,20 +553,21 @@ def get_stats(
         >>> print(stats)
     """
     stats = _validate_stats_params(stats, percentiles)
+    version = resolve_version(version)
+    if exclude_wetlands and version != "v2":
+        raise ValueError("exclude_wetlands is available only for version='v2'")
     geometry = normalize_client_input(geometry, target="geometry")
     layers = get_layers(
         layers="all" if include_components else "eii",
-        aggregation_method=aggregation_method,
-        compute_mode=compute_mode,
-        geometry=geometry,
-        npp_year_range=npp_year_range,
-        include_seasonality=include_seasonality,
-        natural_npp_asset_path=natural_npp_asset_path,
-        observed_npp_asset_path=observed_npp_asset_path,
-        structural_asset_path=structural_asset_path,
-        bii_year=bii_year,
-        absolute_diff_percentile=absolute_diff_percentile,
+        version=version,
+        reference_year=reference_year,
     )
+    flag = None
+    if version == "v2":
+        flag = get_layers("wetland_flag", version, reference_year)["wetland_flag"]
+        flagged = flag.gt(0).updateMask(layers["eii"].mask()).rename("wetland_flag")
+        if exclude_wetlands:
+            layers = {name: image.updateMask(flag.eq(0)) for name, image in layers.items()}
     eii_image = layers["eii"]
 
     is_point = _is_point_geometry(geometry).getInfo()
@@ -641,7 +581,7 @@ def get_stats(
         values = _format_stats("eii", eii_stats, False, stats, percentiles)
 
     if include_components:
-        components = {k: v for k, v in layers.items() if k != "eii"}
+        components = {name: layers[name] for name in ("functional", "structural", "compositional")}
         for name, image in components.items():
             component_label = name if name.endswith("_integrity") else f"{name}_integrity"
             if is_point:
@@ -652,6 +592,14 @@ def get_stats(
                     image, geometry, scale, stats, percentiles
                 ).getInfo()
                 values.update(_format_stats(component_label, comp_stats, False, stats, percentiles))
+
+    if flag is not None:
+        if is_point:
+            code = _reduce_point_values(flag, geometry, scale).getInfo() or {}
+            values["wetland_flag"] = code.get("wetland_flag")
+        else:
+            share = _reduce_area_stats(flagged, geometry, scale).getInfo() or {}
+            values["wetland_flag"] = {"share": share.get("wetland_flag")}
 
     result = {"geometry_type": geometry_type, "values": values}
 
@@ -665,17 +613,9 @@ def get_stats(
 
 def get_raster(
     geometry: ee.Geometry,
-    aggregation_method: AggregationMethod = "min_fuzzy_logic",
     include_components: bool = True,
     scale: int = 300,
-    compute_mode: ComputeMode = "precomputed",
-    npp_year_range: list[str] = OBSERVED_NPP_YEAR_RANGE,
-    include_seasonality: bool = True,
-    natural_npp_asset_path: str = NATURAL_NPP_ASSET_PATH,
-    observed_npp_asset_path: str = OBSERVED_NPP_ASSET_PATH,
-    structural_asset_path: str | None = None,
-    bii_year: int = DEFAULT_BII_YEAR,
-    absolute_diff_percentile: str = "p95",
+    version: str | None = None,
     max_area_sq_km: float | None = None,
     max_pixels: int | None = None,
     chunking: Literal["auto", "never", "always"] = "auto",
@@ -687,6 +627,7 @@ def get_raster(
     max_memory_fraction: float = 0.25,
     dtype: Literal["float32", "float64"] = "float64",
     download_crs: str = "EPSG:4326",
+    reference_year: int | None = None,
 ):
     """
     Download EII rasters for an AOI as an xarray Dataset.
@@ -694,17 +635,11 @@ def get_raster(
     Args:
         geometry: AOI geometry (ee.Geometry/Feature/FeatureCollection, GeoPandas,
             shapely, or bbox tuple).
-        aggregation_method: EII aggregation method.
         include_components: If True, include component bands alongside EII.
         scale: Resolution in meters for export. Defaults to 300.
-        compute_mode: "precomputed" (default) or "on_the_fly".
-        npp_year_range: Date range for observed NPP (on-the-fly mode).
-        include_seasonality: Include seasonality in functional integrity.
-        natural_npp_asset_path: Asset for pre-computed natural NPP.
-        observed_npp_asset_path: Asset for observed NPP annual tiles.
-        structural_asset_path: Asset for structural integrity core area.
-        bii_year: BII year to select for compositional integrity.
-        absolute_diff_percentile: Percentile key for NPP absolute difference penalty.
+        reference_year: v2 reference year, defaults to the latest; see ``get_layers``.
+        version: EII dataset version (e.g. "v1", "v2"). If None, uses the active
+            session version (see eii.client.set_version), defaulting to config.yaml.
         max_area_sq_km: Optional upper bound for AOI area before chunking.
         max_pixels: Optional upper bound for total pixels before chunking.
         chunking: "auto" (default), "never", or "always".
@@ -720,6 +655,9 @@ def get_raster(
 
     Band order:
         "eii", "functional_integrity", "structural_integrity", "compositional_integrity".
+        Version v2 appends "limiting_component" and "wetland_flag" when
+        include_components=True.
+        These categorical codes are excluded from get_stats/get_zonal_stats reductions.
 
     Returns:
         xarray.Dataset when output_format="memory"; otherwise a Path (single download)
@@ -730,16 +668,8 @@ def get_raster(
         compression = "ZSTD"
     layers = get_layers(
         layers="all" if include_components else "eii",
-        aggregation_method=aggregation_method,
-        compute_mode=compute_mode,
-        geometry=geometry,
-        npp_year_range=npp_year_range,
-        include_seasonality=include_seasonality,
-        natural_npp_asset_path=natural_npp_asset_path,
-        observed_npp_asset_path=observed_npp_asset_path,
-        structural_asset_path=structural_asset_path,
-        bii_year=bii_year,
-        absolute_diff_percentile=absolute_diff_percentile,
+        version=version,
+        reference_year=reference_year,
     )
 
     band_images = [layers["eii"].rename("eii")]
@@ -749,8 +679,15 @@ def get_raster(
             band = layers[name].rename(f"{name}_integrity")
             band_images.append(band)
             band_names.append(f"{name}_integrity")
+        for name in CATEGORICAL_BANDS:
+            if name in layers:
+                band_images.append(layers[name])
+                band_names.append(name)
 
     image = ee.Image.cat(band_images).clip(geometry)
+    if any(name in band_names for name in CATEGORICAL_BANDS):
+        # A multiband GeoTIFF needs a common type for scores and category codes.
+        image = image.toDouble() if dtype == "float64" else image.toFloat()
     area_sq_km = _estimate_area_sq_km(geometry)
     pixel_count = (area_sq_km * 1_000_000) / float(scale * scale)
     estimated_bytes = _estimate_bytes(area_sq_km, scale, len(band_names), dtype)
@@ -804,7 +741,7 @@ def get_raster(
 
         dataset.attrs.update(
             {
-                "eii_method": aggregation_method,
+                "eii_method": "min_fuzzy_logic",
                 "scale_m": scale,
                 "area_sq_km": area_sq_km,
             }
@@ -887,7 +824,7 @@ def get_raster(
     dataset = xr.combine_by_coords(datasets, combine_attrs="override")
     dataset.attrs.update(
         {
-            "eii_method": aggregation_method,
+            "eii_method": "min_fuzzy_logic",
             "scale_m": scale,
             "area_sq_km": area_sq_km,
             "chunked": True,

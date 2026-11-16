@@ -67,15 +67,10 @@ class TestAnalysis:
         )
         assert "name" in result.columns.get_level_values(0)
 
-    @pytest.mark.slow
-    def test_compare_methods_on_the_fly(self):
-        """Test compare_methods with on_the_fly compute (slow)."""
+    def test_compare_methods_recombines_components(self):
+        """compare_methods recombines the pre-computed components with each method."""
         tiny = ee.Geometry.Rectangle([-62.55, -3.55, -62.5, -3.5])
-        result = compare_methods(tiny, compute_mode="on_the_fly", scale=1000)
-
-        assert isinstance(result, ee.Dictionary)
-
-        info = result.getInfo()
+        info = compare_methods(tiny, scale=1000).getInfo()
         expected = ["minimum", "product", "min_fuzzy_logic", "geometric_mean"]
         for method in expected:
             assert method in info, f"Missing method: {method}"
@@ -84,24 +79,9 @@ class TestAnalysis:
             if val is not None:
                 assert 0 <= val <= 1, f"{method}={val} out of range"
 
-        # Methods should produce different values
-        values = [v for v in info.values() if v is not None]
-        if len(values) >= 2:
-            assert {round(v, 4) for v in values}.__len__() >= 2, "Methods should differ"
-
-    def test_compare_methods_precomputed_and_errors(self):
-        """Test precomputed mode behavior and error handling."""
+    def test_single_method_via_get_stats(self):
+        """The published min_fuzzy_logic EII is available through get_stats."""
         tiny = ee.Geometry.Rectangle([-62.55, -3.55, -62.5, -3.5])
-
-        # Precomputed only supports default method, so compare_methods fails
-        with pytest.raises(ValueError, match="pre-computed default method"):
-            compare_methods(tiny, compute_mode="precomputed").getInfo()
-
-        # Invalid compute_mode
-        with pytest.raises(ValueError):
-            compare_methods(tiny, compute_mode="invalid").getInfo()
-
-        # But single method in precomputed works via get_stats
         from eii.client import get_stats
 
         result = get_stats(tiny, include_components=False, scale=1000)

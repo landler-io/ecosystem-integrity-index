@@ -155,7 +155,7 @@ def quicklook(
         shapes = list(gdf_input.geometry)
         if hasattr(gdf_input, "iterrows"):
             for _, row in gdf_input.iterrows():
-                properties.append(row.drop(labels=["geometry"]).to_dict())
+                properties.append(row.drop(labels=[gdf_input.geometry.name]).to_dict())
     elif hasattr(geometry, "geom_type"):
         shapes = [geometry]
         properties = [{}]

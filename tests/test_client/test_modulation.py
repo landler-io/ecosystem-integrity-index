@@ -1,9 +1,10 @@
 """Tests for eii.client.modulation module."""
 
+import ee
 import pytest
 
 from eii.client.modulation import get_modulated_eii, get_nc_score
-from eii.compute.modulation import apply_modulation, calculate_nc_score
+from eii.modulation import apply_modulation, calculate_nc_score
 
 
 class TestModulationClient:
@@ -17,7 +18,6 @@ class TestModulationClient:
             amazon_small_polygon,
             kpis=kpis,
             include_components=False,
-            compute_mode="precomputed",
             scale=1000,
             stats=["mean"],
         )
@@ -41,6 +41,16 @@ class TestModulationClient:
         assert values["biodiversity_kpi"]["mean"] == pytest.approx(kpis["biodiversity"])
         assert values["soil_kpi"]["mean"] == pytest.approx(kpis["soil"])
         assert values["water_kpi"]["mean"] == pytest.approx(kpis["water"])
+
+    def test_layer_modulation_uses_base_eii_pixels(self):
+        """Modulated and base EII share pixels where SoilGrids leaves sealed surfaces empty."""
+        munich = ee.Geometry.Rectangle([11.55, 48.12, 11.6, 48.15])
+        values = get_modulated_eii(munich, compute_default_kpis=True, include_components=False)[
+            "values"
+        ]
+
+        expected = values["eii"]["mean"] + (values["nc_score"]["mean"] - 0.5) * 0.1
+        assert values["eii_modulated"]["mean"] == pytest.approx(expected, abs=1e-3)
 
     def test_modulation_input_validation(self, amazon_small_polygon):
         """Validate input errors without extra GEE calls."""

@@ -1,0 +1,99 @@
+version,biome,biome_name,mean_own_mask
+wcmc_2000,1,Tropical moist broadleaf,0.834471
+wcmc_2000,2,Tropical dry broadleaf,0.724706
+wcmc_2000,3,Tropical conifer,0.793464
+wcmc_2000,4,Temperate broadleaf,0.650063
+wcmc_2000,5,Temperate conifer,0.840124
+wcmc_2000,6,Boreal,0.952953
+wcmc_2000,7,Savanna,0.663612
+wcmc_2000,8,Temperate grassland,0.546802
+wcmc_2000,9,Flooded grassland,0.618974
+wcmc_2000,10,Montane grassland,0.615275
+wcmc_2000,11,Tundra,0.896432
+wcmc_2000,12,Mediterranean,0.673208
+wcmc_2000,13,Desert and xeric,0.802946
+wcmc_2000,14,Mangrove,0.791542
+wcmc_2005,1,Tropical moist broadleaf,0.847269
+wcmc_2005,2,Tropical dry broadleaf,0.724779
+wcmc_2005,3,Tropical conifer,0.794056
+wcmc_2005,4,Temperate broadleaf,0.649113
+wcmc_2005,5,Temperate conifer,0.838413
+wcmc_2005,6,Boreal,0.954015
+wcmc_2005,7,Savanna,0.678719
+wcmc_2005,8,Temperate grassland,0.54707
+wcmc_2005,9,Flooded grassland,0.622554
+wcmc_2005,10,Montane grassland,0.618534
+wcmc_2005,11,Tundra,0.895382
+wcmc_2005,12,Mediterranean,0.669741
+wcmc_2005,13,Desert and xeric,0.802392
+wcmc_2005,14,Mangrove,0.782462
+wcmc_2010,1,Tropical moist broadleaf,0.837865
+wcmc_2010,2,Tropical dry broadleaf,0.715707
+wcmc_2010,3,Tropical conifer,0.791484
+wcmc_2010,4,Temperate broadleaf,0.643632
+wcmc_2010,5,Temperate conifer,0.83305
+wcmc_2010,6,Boreal,0.94878
+wcmc_2010,7,Savanna,0.685844
+wcmc_2010,8,Temperate grassland,0.542031
+wcmc_2010,9,Flooded grassland,0.624668
+wcmc_2010,10,Montane grassland,0.616917
+wcmc_2010,11,Tundra,0.895212
+wcmc_2010,12,Mediterranean,0.67327
+wcmc_2010,13,Desert and xeric,0.803979
+wcmc_2010,14,Mangrove,0.768865
+wcmc_2015,1,Tropical moist broadleaf,0.822771
+wcmc_2015,2,Tropical dry broadleaf,0.698414
+wcmc_2015,3,Tropical conifer,0.778662
+wcmc_2015,4,Temperate broadleaf,0.638678
+wcmc_2015,5,Temperate conifer,0.830333
+wcmc_2015,6,Boreal,0.944258
+wcmc_2015,7,Savanna,0.668515
+wcmc_2015,8,Temperate grassland,0.544889
+wcmc_2015,9,Flooded grassland,0.606689
+wcmc_2015,10,Montane grassland,0.613479
+wcmc_2015,11,Tundra,0.894852
+wcmc_2015,12,Mediterranean,0.671973
+wcmc_2015,13,Desert and xeric,0.802331
+wcmc_2015,14,Mangrove,0.75207
+wcmc_2020,1,Tropical moist broadleaf,0.840945
+wcmc_2020,2,Tropical dry broadleaf,0.713487
+wcmc_2020,3,Tropical conifer,0.790937
+wcmc_2020,4,Temperate broadleaf,0.687811
+wcmc_2020,5,Temperate conifer,0.841755
+wcmc_2020,6,Boreal,0.948454
+wcmc_2020,7,Savanna,0.671217
+wcmc_2020,8,Temperate grassland,0.561755
+wcmc_2020,9,Flooded grassland,0.604014
+wcmc_2020,10,Montane grassland,0.608773
+wcmc_2020,11,Tundra,0.898604
+wcmc_2020,12,Mediterranean,0.694836
+wcmc_2020,13,Desert and xeric,0.799877
+wcmc_2020,14,Mangrove,0.761715
+eii_2021,1,Tropical moist broadleaf,0.794498
+eii_2021,2,Tropical dry broadleaf,0.657997
+eii_2021,3,Tropical conifer,0.814861
+eii_2021,4,Temperate broadleaf,0.587047
+eii_2021,5,Temperate conifer,0.826406
+eii_2021,6,Boreal,0.93147
+eii_2021,7,Savanna,0.835149
+eii_2021,8,Temperate grassland,0.67807
+eii_2021,9,Flooded grassland,0.785596
+eii_2021,10,Montane grassland,0.813699
+eii_2021,11,Tundra,0.941038
+eii_2021,12,Mediterranean,0.641398
+eii_2021,13,Desert and xeric,0.872825
+eii_2021,14,Mangrove,0.703113
+eii_2025,1,Tropical moist broadleaf,0.791481
+eii_2025,2,Tropical dry broadleaf,0.654859
+eii_2025,3,Tropical conifer,0.813291
+eii_2025,4,Temperate broadleaf,0.586275
+eii_2025,5,Temperate conifer,0.823655
+eii_2025,6,Boreal,0.926231
+eii_2025,7,Savanna,0.83302
+eii_2025,8,Temperate grassland,0.678114
+eii_2025,9,Flooded grassland,0.78051
+eii_2025,10,Montane grassland,0.817785
+eii_2025,11,Tundra,0.945187
+eii_2025,12,Mediterranean,0.632257
+eii_2025,13,Desert and xeric,0.87235
+eii_2025,14,Mangrove,0.701424

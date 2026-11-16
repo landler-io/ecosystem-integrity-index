@@ -1,0 +1,52 @@
+{
+ "n_controls": 19984,
+ "series": {
+  "TV": {
+   "sensors": [
+    "T",
+    "V"
+   ],
+   "k_c": 1.0,
+   "k_c_all_controls": 1.0,
+   "met_all_controls": true,
+   "p10_all_controls_production": {
+    "2021": 0.9208,
+    "2022": 0.9237,
+    "2023": 0.9243,
+    "2024": 0.9217,
+    "2025": 0.9157
+   }
+  },
+  "TNc": {
+   "sensors": [
+    "T",
+    "Nc"
+   ],
+   "k_c": 1.0,
+   "k_c_all_controls": 1.0,
+   "met_all_controls": true,
+   "p10_all_controls_production": {
+    "2021": 0.921,
+    "2022": 0.9226,
+    "2023": 0.9225,
+    "2024": 0.9188,
+    "2025": 0.9136
+   }
+  },
+  "Nc": {
+   "sensors": [
+    "Nc"
+   ],
+   "k_c": 1.0,
+   "k_c_all_controls": 1.0,
+   "met_all_controls": true,
+   "p10_all_controls_production": {
+    "2021": 0.9209,
+    "2022": 0.9204,
+    "2023": 0.9183,
+    "2024": 0.916,
+    "2025": 0.9115
+   }
+  }
+ }
+}

@@ -2,7 +2,14 @@
 
 import pytest
 
-from eii.client.assets import ASSETS, get_asset_info, get_asset_path
+from eii.client.assets import (
+    ASSETS,
+    get_asset_info,
+    get_asset_path,
+    get_version,
+    set_version,
+    use_version,
+)
 
 
 class TestAssets:
@@ -18,8 +25,10 @@ class TestAssets:
         components_path = get_asset_path("components")
         assert isinstance(components_path, str)
 
-        structural_path = get_asset_path("structural_core_area")
-        assert "structural" in structural_path.lower()
+        assert get_asset_path("eii", version="v2").endswith("products/eii/v2_0/release/global")
+        assert "v2" not in get_asset_info("eii", version="v2")
+
+        assert get_asset_path("natural_npp", version="v2").endswith("potential_npp_olci_gapfill")
 
         # Unknown asset raises KeyError with helpful message
         with pytest.raises(KeyError) as exc_info:
@@ -53,7 +62,7 @@ class TestAssets:
 
     def test_assets_dict_completeness(self):
         """Test ASSETS dict has required structure."""
-        required_assets = ["eii", "components", "structural_core_area"]
+        required_assets = ["eii", "components", "wetland_flag", "natural_npp"]
 
         for key in required_assets:
             assert key in ASSETS, f"Missing required asset: {key}"
@@ -63,3 +72,65 @@ class TestAssets:
             assert "description" in info, f"Asset {name} missing 'description'"
             # All defined assets should have retrievable paths
             assert isinstance(get_asset_path(name), str)
+
+
+class TestVersionSelection:
+    """Tests for dataset version resolution."""
+
+    @pytest.fixture(autouse=True)
+    def _restore_version(self):
+        """Ensure the session version is restored after each test."""
+        original = get_version()
+        yield
+        set_version(original)
+
+    def test_explicit_version_argument(self):
+        """An explicit version is embedded in the path and beats the session default."""
+        assert get_asset_path("eii", version="v1").endswith("eii_global_v1")
+        assert get_asset_path("eii", version="v9").endswith("eii_global_v9")
+        assert get_asset_path("natural_npp", version="v1").startswith(
+            "projects/landler-open-data/assets/eii/intermediate/"
+        )
+
+    def test_explicit_version_does_not_change_session(self):
+        """Passing version per call must not mutate the active session version."""
+        before = get_version()
+        get_asset_path("eii", version="v1")
+        assert get_version() == before
+
+    def test_default_version_is_v2(self):
+        """Without config overrides or set_version, retrieval reads v2."""
+        from eii.config import VERSION
+
+        assert VERSION == "v2"
+        assert get_asset_path("eii", version=VERSION).endswith("products/eii/v2_0/release/global")
+
+    def test_set_version_changes_default(self):
+        """set_version changes the version used when none is passed."""
+        original = get_version()
+        try:
+            set_version("v1")
+            assert get_version() == "v1"
+            assert get_asset_path("eii").endswith("eii_global_v1")
+        finally:
+            set_version(original)
+
+    def test_use_version_context_manager(self):
+        """use_version applies within the block and restores afterwards."""
+        original = get_version()
+        with use_version("v1"):
+            assert get_version() == "v1"
+            assert get_asset_path("components").endswith("eii_global_v1")
+        assert get_version() == original
+
+    def test_use_version_restores_on_exception(self):
+        """The session version is restored even if the block raises."""
+        original = get_version()
+        with pytest.raises(RuntimeError), use_version("v1"):
+            raise RuntimeError("boom")
+        assert get_version() == original
+
+    def test_set_version_rejects_empty(self):
+        """An empty or non-string version is rejected."""
+        with pytest.raises(ValueError):
+            set_version("")

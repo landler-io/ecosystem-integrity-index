@@ -28,7 +28,7 @@ jobs:
           pip install -e ".[docs]"
 
       - name: Build documentation
-        run: mkdocs build
+        run: mkdocs build --strict
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

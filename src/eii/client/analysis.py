@@ -7,17 +7,13 @@ using pre-computed EII assets.
 
 from __future__ import annotations
 
-from typing import Literal
-
 import ee
 
-from eii.compute.settings import OBSERVED_NPP_YEAR_RANGE
+from eii.compute.settings import AggregationMethod
 
+from .assets import resolve_version
 from .retrieve import _build_reducer, _validate_stats_params, get_layers
 from .utils import normalize_client_input
-
-AggregationMethod = Literal["min_fuzzy_logic", "minimum", "product", "geometric_mean"]
-ComputeMode = Literal["precomputed", "on_the_fly"]
 
 
 def _features_to_geodataframe(features: ee.FeatureCollection):
@@ -32,40 +28,38 @@ def _features_to_geodataframe(features: ee.FeatureCollection):
 
 def get_zonal_stats(
     features: ee.FeatureCollection,
-    aggregation_method: AggregationMethod = "min_fuzzy_logic",
     include_components: bool = True,
     scale: int = 300,
     stats: list[str] | None = None,
     percentiles: list[int] | None = None,
-    compute_mode: ComputeMode = "precomputed",
-    npp_year_range: list[str] | None = None,
-    include_seasonality: bool = True,
-    bii_year: int | None = None,
-    absolute_diff_percentile: str = "p95",
     keep_columns: list[str] | None = None,
+    version: str | None = None,
+    reference_year: int | None = None,
+    exclude_wetlands: bool = False,
 ):
     """
     Calculate EII zonal statistics for each feature in a collection.
 
     Args:
         features: FeatureCollection or GeoPandas/shapely inputs containing zones.
-        aggregation_method: EII aggregation method.
         include_components: Include component statistics.
         scale: Resolution in meters for the reduction. Defaults to 300.
         stats: Statistics to compute. Supported: "mean", "median", "min",
             "max", "std". Defaults to ["mean"].
         percentiles: Optional list of percentiles (0-100) to include.
-        compute_mode: "precomputed" (default) or "on_the_fly".
-        npp_year_range: Date range for observed NPP (on-the-fly mode).
-        include_seasonality: Include seasonality in functional integrity.
-        bii_year: BII year to select for compositional integrity.
-        absolute_diff_percentile: Percentile key for NPP absolute difference penalty.
+        reference_year: v2 reference year, defaults to the latest; see ``get_layers``.
         keep_columns: Optional list of input feature properties to preserve.
             Extracted stats are always included.
+        version: EII dataset version (e.g. "v1", "v2"). If None, uses the active
+            session version (see eii.client.set_version), defaulting to config.yaml.
+        exclude_wetlands: v2 only. Mask pixels with a nonzero ``wetland_flag``
+            before the reduction. By default flagged pixels are only reported.
 
     Returns:
         GeoDataFrame with EII statistics for each feature. Columns use MultiIndex
         format: (metric, stat), e.g., (eii, mean), (functional_integrity, min).
+        Version v2 adds (wetland_flag, share): the flagged share of valid EII
+        pixels, computed before any exclusion.
 
     Example:
         >>> import ee
@@ -73,20 +67,24 @@ def get_zonal_stats(
         >>> countries = ee.FeatureCollection("FAO/GAUL/2015/level0")
         >>> gdf = get_zonal_stats(countries.limit(10), stats=["mean", "min", "max"])
     """
+    version = resolve_version(version)
+    if exclude_wetlands and version != "v2":
+        raise ValueError("exclude_wetlands is available only for version='v2'")
     layers = get_layers(
         layers="all" if include_components else "eii",
-        aggregation_method=aggregation_method,
-        compute_mode=compute_mode,
-        geometry=None,
-        npp_year_range=npp_year_range or OBSERVED_NPP_YEAR_RANGE,
-        include_seasonality=include_seasonality,
-        bii_year=bii_year or 2020,
-        absolute_diff_percentile=absolute_diff_percentile,
+        version=version,
+        reference_year=reference_year,
     )
     image_stack = layers["eii"]
     if include_components:
         for name in ("functional", "structural", "compositional"):
             image_stack = image_stack.addBands(layers[name].rename(f"{name}_integrity"))
+    flagged = None
+    if version == "v2":
+        flag = get_layers("wetland_flag", version, reference_year)["wetland_flag"]
+        flagged = flag.gt(0).updateMask(layers["eii"].mask()).rename("wetland_flag_share")
+        if exclude_wetlands:
+            image_stack = image_stack.updateMask(flag.eq(0))
 
     features = normalize_client_input(features, target="features")
     stats = _validate_stats_params(stats, percentiles)
@@ -99,6 +97,14 @@ def get_zonal_stats(
             scale=scale,
             maxPixels=1e12,
         )
+        if flagged is not None:
+            share = flagged.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=feature.geometry(),
+                scale=scale,
+                maxPixels=10**12,
+            )
+            stats_result = stats_result.combine(share)
         return feature.set(stats_result)
 
     result = features.map(add_stats)
@@ -165,24 +171,20 @@ def get_zonal_stats(
 def compare_methods(
     geometry: ee.Geometry,
     scale: int = 300,
-    compute_mode: ComputeMode = "precomputed",
-    npp_year_range: list[str] | None = None,
-    include_seasonality: bool = True,
-    bii_year: int | None = None,
-    absolute_diff_percentile: str = "p95",
+    version: str | None = None,
+    reference_year: int | None = None,
 ) -> ee.Dictionary:
     """
     Compare EII values across different aggregation methods for a polygon.
+
+    Each method recombines the pre-computed components; only ``min_fuzzy_logic`` is
+    published as the EII band.
 
     Args:
         geometry: AOI geometry (ee.Geometry/Feature/FeatureCollection, GeoPandas,
             shapely, or bbox tuple).
         scale: Resolution in meters.
-        compute_mode: "precomputed" (default) or "on_the_fly".
-        npp_year_range: Date range for observed NPP (on-the-fly mode).
-        include_seasonality: Include seasonality in functional integrity.
-        bii_year: BII year to select for compositional integrity.
-        absolute_diff_percentile: Percentile key for NPP absolute difference penalty.
+        reference_year: v2 reference year, defaults to the latest; see ``get_layers``.
 
     Returns:
         Dictionary with mean EII for each aggregation method.
@@ -199,28 +201,12 @@ def compare_methods(
         "min_fuzzy_logic",
         "geometric_mean",
     ]
+    components = get_layers("components", version, reference_year)
     result = ee.Dictionary({})
-
     for method in methods:
-        if compute_mode == "precomputed":
-            eii = get_layers(
-                layers="eii",
-                aggregation_method=method,
-                compute_mode=compute_mode,
-            )["eii"]
-        elif compute_mode == "on_the_fly":
-            eii = get_layers(
-                layers="eii",
-                aggregation_method=method,
-                compute_mode=compute_mode,
-                geometry=geometry,
-                npp_year_range=npp_year_range or OBSERVED_NPP_YEAR_RANGE,
-                include_seasonality=include_seasonality,
-                bii_year=bii_year or 2020,
-                absolute_diff_percentile=absolute_diff_percentile,
-            )["eii"]
-        else:
-            raise ValueError("compute_mode must be one of: 'precomputed', 'on_the_fly'")
+        eii = combine_components(
+            components["functional"], components["structural"], components["compositional"], method
+        )
         mean_val = eii.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=geometry,
@@ -230,3 +216,37 @@ def compare_methods(
         result = result.set(method, mean_val)
 
     return result
+
+
+def combine_components(
+    functional: ee.Image,
+    structural: ee.Image,
+    compositional: ee.Image,
+    method: AggregationMethod = "min_fuzzy_logic",
+) -> ee.Image:
+    """Earth Engine counterpart of ``eii.compute.combine_components`` for component layers.
+
+    Args:
+        functional: Functional integrity image (0-1).
+        structural: Structural integrity image (0-1).
+        compositional: Compositional integrity image (0-1).
+        method: "minimum", "product", "geometric_mean" or "min_fuzzy_logic".
+
+    Returns:
+        EII image named "eii", masked wherever any component is missing.
+    """
+    components = ee.Image.cat([functional, structural, compositional])
+    if method == "minimum":
+        eii = components.reduce(ee.Reducer.min())
+    elif method == "product":
+        eii = components.reduce(ee.Reducer.product())
+    elif method == "geometric_mean":
+        eii = components.reduce(ee.Reducer.product()).pow(1.0 / 3.0)
+    elif method == "min_fuzzy_logic":
+        low = components.reduce(ee.Reducer.min())
+        mid = components.reduce(ee.Reducer.median())
+        high = components.reduce(ee.Reducer.max())
+        eii = low.multiply(mid.add(high).subtract(mid.multiply(high)))
+    else:
+        raise ValueError(f"Unknown method '{method}'")
+    return eii.updateMask(components.mask().reduce(ee.Reducer.min())).rename("eii")
