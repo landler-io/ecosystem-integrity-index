@@ -1,34 +1,73 @@
-# Ecosystem Integrity Index (EII)
+# Ecosystem Integrity Index
 
-The **Ecosystem Integrity Index (EII)** synthesizes the three pillars—Function, Structure, and Composition—into a single, scientifically robust score.
+The EII combines functional (F), structural (S) and compositional (C) integrity into one score.
 
-## The Aggregation Challenge
-An ecosystem can be degraded in multiple ways, and a holistic assessment must account for all of them. Simple averaging often masks critical failures. For example, a forest plantation might have high productivity (Functional) and high connectivity (Structural), but near-zero biodiversity (Compositional). A simple average would suggest a "healthy" ecosystem, while in reality, it is ecologically poor.
+## Why not an average
 
-## Methodology: Minimum with Fuzzy Logic
+An ecosystem can be degraded in different ways, and an average hides a collapsed component. A
+plantation may be highly productive (high F) and sit in a forested landscape (high S) while
+holding little of the native species community (low C). Its average would suggest a healthy
+ecosystem.
 
-To address this, the EII employs a **Limiting Factor** approach combined with **Fuzzy Logic**.
+## Minimum with fuzzy sum
 
-### 1. Limiting Factor Principle
-Following ecological theory (Liebig's Law of the Minimum), we recognize that an ecosystem's overall integrity is constrained by its most degraded component. Therefore, the EII score is primarily driven by the **minimum** of the three pillar scores.
+The EII follows a limiting-factor rule: the most degraded component sets the ceiling. The other
+two components then lower the score further when they are degraded too. With the components
+sorted as $x_{(1)} \le x_{(2)} \le x_{(3)}$:
 
-### 2. Fuzzy Interaction
-However, simply taking the minimum ignores the state of the other components. If two ecosystems both have a minimum score of 0.5, but one has high scores in the other pillars while the other has low scores, they should not receive the exact same final rating.
+$$\mathrm{EII} = x_{(1)} \cdot \left(x_{(2)} + x_{(3)} - x_{(2)}\,x_{(3)}\right)$$
 
-We use a fuzzy logic aggregation that starts with the minimum but modulates it based on the other factors:
+The second factor is the fuzzy (probabilistic) sum of the other two components. It is 1 when
+either of them is 1 and falls only when both are degraded.
 
-$$ EII = M \times F $$
+| F | S | C | EII |
+|---|---|---|---|
+| 1.0 | 1.0 | 1.0 | 1.00 |
+| 1.0 | 0.5 | 1.0 | 0.50 |
+| 0.8 | 0.5 | 0.8 | 0.48 |
+| 0.8 | 0.5 | 0.5 | 0.45 |
+| 0.4 | 0.4 | 0.4 | 0.26 |
 
-Where:
-*   $M = \min(\text{Functional}, \text{Structural}, \text{Compositional})$
-*   $F = \text{Fuzzy Sum of the remaining two components}$
+The rule guarantees that:
 
-The **Fuzzy Sum** of two values $A$ and $B$ is calculated as:
-$$ \text{FuzzySum}(A, B) = A + B - (A \times B) $$
+1. EII never exceeds the lowest component;
+2. EII equals the lowest component when either of the other two is fully intact, and falls below
+   it when both are degraded, so degradation in several components weighs more than in one.
 
-### Summary
-This formula ensures that:
-1.  **Strict Ceiling:** The EII can never exceed the score of the lowest performing pillar.
-2.  **Penalty for Cumulative Degradation:** If multiple pillars are degraded, the score is lower than if only one pillar is degraded.
+## Missing components
 
-See the [API Reference](../api/compute.md) for `combine_components` and `calculate_eii`.
+EII requires all three components. Where any of them is missing, EII and the limiting component
+are masked; a missing component is never treated as 0 or skipped. Each component band keeps its
+own mask.
+
+## Limiting component
+
+The `limiting_component` band records the smallest component per pixel:
+
+| Code | Component |
+|---|---|
+| 0 | none (a component is missing) |
+| 1 | Functional |
+| 2 | Structural |
+| 3 | Compositional |
+
+Ties prefer functional, then structural, then compositional. The band shows what drives a low
+score: modified landscapes are usually limited by structure or composition, while functional
+integrity mostly limits otherwise intact land where productivity departs from its potential.
+
+## Alternative aggregations
+
+`eii.compute.combine_components` also offers `minimum`, `product` and `geometric_mean`, and
+`eii.client.compare_methods` recombines the published components with all four methods for an area.
+The published EII uses `min_fuzzy_logic`.
+
+```python
+import numpy as np
+from eii.compute import combine_components, limiting_component
+
+f, s, c = np.array([1.0, 0.8]), np.array([0.5, 0.5]), np.array([1.0, 0.5])
+combine_components(f, s, c)   # array([0.5 , 0.45], dtype=float32)
+limiting_component(f, s, c)   # array([2, 2], dtype=uint8)
+```
+
+See the [API Reference](../api/compute.md) for `combine_components` and `limiting_component`.

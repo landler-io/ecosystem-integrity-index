@@ -1,54 +1,62 @@
 # API Reference
 
-This section contains the complete API documentation for the `eii` package.
+The `eii` package has three parts.
 
-## Client vs Compute
+| Part | When to use | Key functions | Extra |
+|---|---|---|---|
+| **Client** | Retrieve published EII layers and statistics | `get_stats`, `get_zonal_stats`, `get_raster`, `get_layers` | `[client]` |
+| **Compute** | Reproduce or adapt the calculation on your own arrays | `deviation_tolerance_integrity`, `fi_change`, `structural_integrity`, `combine_components` | `[compute]` |
+| **Training** | Sampling design and validation of the potential NPP model | `draw_design`, `gap_fill`, `load_model_card` | `[training]` |
 
-Use the client workflow when you want fast access to pre-computed global layers.
-Use the compute workflow when you need alternative aggregation methods or custom inputs.
+Install a part with its extra, for example
+`pip install "ecosystem-integrity-index[client] @ git+https://github.com/landler-io/ecosystem-integrity-index"`.
 
-| Workflow | When to use | Key functions | Dependencies |
-|----------|-------------|---------------|--------------|
-| **Client (precomputed)** | Most users; quick stats and raster downloads | `get_stats`, `get_raster`, `get_layers` | `ecosystem-integrity-index[client]` |
-| **Compute (on-the-fly)** | Custom aggregation or recalculation for an AOI | `calculate_eii`, `calculate_functional_integrity` | `ecosystem-integrity-index[compute]` |
-| **Training** | Model development and validation | `train_npp_model`, `validate_model` | `ecosystem-integrity-index[training]` |
+The global layers are computed with the compute functions
+([`pipelines/production`](https://github.com/landler-io/ecosystem-integrity-index/tree/main/pipelines/production))
+and published as Earth Engine collections, which the client reads. The client needs an
+initialised Earth Engine session; compute and training run on numpy arrays without Earth Engine.
+Natural Capital modulation lives in `eii.modulation` and is exposed through the client
+([Local Modulation](../methodology/local_modulation.md)).
 
 ## Modules
 
 ### [eii.client](client.md)
 
-Client interface for EII data access from Google Earth Engine.
-
-- `get_stats()` - Extract EII statistics for a geometry
-- `get_raster()` - Download EII raster for a geometry
-- `get_layers()` - Get EII and/or integrity component layers as ee.Image
-- `ASSETS` - Asset paths and metadata
+- `get_stats()`: values at a point or statistics for an area
+- `get_raster()`: download EII and component rasters
+- `get_layers()`: EII, components, limiting component, wetland flag and the FI parts as `ee.Image`
+- `set_version()`, `use_version()`, `get_version()`, `get_asset_path()`: dataset version and
+  asset paths
+- `get_modulated_eii()` and related: [Local Modulation](../methodology/local_modulation.md)
 
 ### [eii.client.analysis](analysis.md)
 
-Analysis utilities for EII data.
-
-- `get_zonal_stats()` - Zonal statistics for feature collections
-- `compare_methods()` - Compare different aggregation methods
+- `get_zonal_stats()`: statistics for many features at once
+- `compare_methods()`: recombine the components with each aggregation method
 
 ### [eii.compute](compute.md)
 
-Core computation utilities for on-the-fly EII.
-
-- `calculate_eii()` - Compute EII from component layers
-- `calculate_functional_integrity()` - NPP-based functional integrity
-- `calculate_structural_integrity()` - Structural integrity (core area)
-- `calculate_compositional_integrity()` - Compositional integrity (BII)
+- `observed_npp_window()`, `observed_npp()`: observed NPP of a reference year
+- `recentring_sums()`, `recentring_factors()`, `recentre_potential()`: per-biome recentring
+- `deviation_tolerance_integrity()`: the state score of functional integrity
+- `annual_evi()`, `correct_drift()`, `change_ratio()`, `combine_ratios()`, `tolerance_h()`,
+  `fi_change()`: the change term
+- `functional_with_change()`: functional integrity, FI_state × FI_change
+- `wetland_flag()`: GLWD-based wetland flag
+- `structural_integrity()`, `habitat_quality()`: landscape quality from HMI
+- `compositional_integrity()`: clamped BII
+- `combine_components()`, `limiting_component()`: EII and its limiting component
 
 ### [eii.training](training.md)
 
-Model training utilities for advanced users.
+Sampling design, spatial cross-validation folds and the model card of the potential NPP model.
 
-## Quick Reference
+## Quick reference
 
 ```python
-# Most common imports
-from eii.client import get_stats, get_raster, get_layers, ASSETS
-from eii.client import get_zonal_stats, compare_methods
-from eii.compute import calculate_eii, calculate_functional_integrity
+from eii.client import get_stats, get_raster, get_layers, get_zonal_stats
+from eii.compute import deviation_tolerance_integrity, structural_integrity, combine_components
+
+stats = get_stats((11.0, 47.5, 11.5, 48.0), reference_year=2024)
+v1_stats = get_stats((11.0, 47.5, 11.5, 48.0), version="v1")
 ```

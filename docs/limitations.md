@@ -1,150 +1,210 @@
-# Scientific Considerations & Interpretation Guidance
-
-The Ecosystem Integrity Index represents an ambitious effort to synthesize multiple dimensions of ecosystem health into a single, globally consistent metric. Like any index that attempts to distill complex ecological systems into quantitative scores, the EII involves methodological choices and data constraints that users should understand when interpreting results. This document provides transparent guidance on these considerations.
-
-We present these considerations as important context that shapes how the EII should be applied and interpreted across different use cases. Many of these considerations reflect inherent challenges in global-scale ecological assessment that affect all comparable indices, while others point toward specific areas where ongoing research and data improvements will strengthen future versions.
-
----
-
-## Understanding the Compositional Pillar
-
-The compositional integrity component draws on the Biodiversity Intactness Index, a metric developed through years of research by the Natural History Museum London and collaborators. The BII estimates how much of an ecosystem's original species community remains relative to an undisturbed reference state; a fundamentally important question for understanding ecosystem health. However, several characteristics of this data source merit consideration when interpreting compositional integrity scores.
-
-### The Challenge of Biodiversity Data
-
-Global biodiversity assessment faces a fundamental data challenge that affects all efforts to map species composition at scale. The statistical models underlying the BII are trained on the PREDICTS database, which represents one of the most comprehensive compilations of biodiversity survey data ever assembled, containing millions of records from thousands of sites worldwide. Nevertheless, the distribution of ecological research effort across the globe is uneven. Biodiversity surveys tend to concentrate in regions with strong research infrastructure, i.e. Western Europe, North America, and well-established tropical research stations, while vast areas of Central Asia, the Sahel, parts of South America, and much of the Middle East have received comparatively less systematic study.
-
-This geographic pattern in underlying data means that the statistical relationships between human pressures and biodiversity responses are calibrated primarily on certain ecosystem types and biogeographic regions. When the BII model predicts compositional integrity in under-sampled regions, it necessarily extrapolates from relationships learned elsewhere. For most applications, this extrapolation is reasonable, namely that the fundamental ecological principle that habitat conversion reduces native species abundance holds globally. However, the magnitude of these relationships may vary across biogeographic provinces in ways that current data cannot fully capture. Users working in regions with sparse biodiversity survey coverage should interpret compositional scores as informative estimates rather than precise measurements, and consider supplementing EII assessments with local biodiversity expertise where available.
-
-### Temporal Considerations
-
-The BII dataset currently used in this implementation extends through 2020-2022. This creates a temporal offset with the functional integrity pillar, which incorporates satellite observations through 2025. For most landscapes, where conditions change gradually, this offset has minimal practical impact. However, in rapidly transforming regions, active deforestation frontiers, areas undergoing major infrastructure development, or sites experiencing rapit restoration interventions, users should recognize that compositional scores may reflect conditions from several years prior. The same is true for the structural connectivity that is estimated from 2022 estimates of human footprint.
-Fortunately, the functional integrity pillar, with its near-real-time satellite observations, can serve as an early indicator of ecosystem change, prompting closer investigation in areas where productivity patterns shift unexpectedly.
-
----
-
-## The Functional Integrity Reference State
-
-Functional integrity compares observed ecosystem productivity to a modeled "natural potential": what productivity we would expect if the landscape were operating under minimal human influence given its climate, soils, and topography. This comparison requires training a predictive model on reference areas that approximate natural conditions, which introduces considerations worth understanding.
-
-### Learning from Earth's Remaining Wild Places
-
-The natural productivity model draws its understanding of ecosystem potential from the planet's most intact landscapes, i.e. areas with minimal human modification, including protected wilderness, remote forests, and other regions where natural processes predominate. This approach is scientifically sound: these areas provide our best available empirical evidence for how ecosystems function absent substantial human alteration. However, the geographic distribution of remaining intact ecosystems is not uniform across all environmental conditions.
-
-In regions with long histories of intensive land use, such as Western Europe, the Indian subcontinent, or eastern China, very few reference areas remain that represent the full range of environmental conditions present in those regions. The productive lowlands and fertile valleys that humans preferentially settled and cultivated are precisely the conditions least represented in remaining natural areas. The model must therefore learn the potential productivity of these environments partly from analogous conditions in other parts of the world, e.g. temperate forests in Eastern North America informing estimates for Western Europe, for instance, or Asian subtropical forests providing context for predictions in southern China.
-
-This extrapolation is guided by well-established ecological principles: productivity responds to temperature, water availability, and soil characteristics in broadly predictable ways across similar environments worldwide. Nevertheless, regional idiosyncrasies in species pools, evolutionary history, and biogeochemical cycling may create local variations that global models cannot fully capture. In heavily transformed regions, functional integrity scores should be interpreted as estimates informed by global ecological relationships rather than locally calibrated benchmarks.
-
-### A Contemporary Reference Point
-
-The EII measures ecosystem condition relative to the best remaining examples of nature that exist today, not relative to some historical pre-industrial baseline. Today's reference landscapes have themselves experienced background changes, elevated atmospheric CO2, nitrogen deposition from industrial emissions, and climate warming, that distinguish them from ecosystems of centuries past. This design choice reflects both practical necessity and a forward-looking philosophy: the EII asks "how does this ecosystem compare to the best we can currently achieve?" rather than "how does it compare to an idealized past we cannot directly observe?"
-
-This framing has important implications for interpretation. An ecosystem that matches contemporary reference conditions receives high functional integrity scores even if historical records suggest that region once supported even higher productivity. The EII is best understood as measuring present-day relative condition rather than absolute deviation from historical baselines.
-
-### Climate Variability and Change
-
-Ecosystem productivity naturally fluctuates with weather patterns: wet years boost plant growth while droughts suppress it. The EII's multi-year averaging of observed productivity (three years) and natural productivity (ten years) dampens the influence of short-term weather variability, focusing the assessment on underlying ecosystem condition rather than transient meteorological events. Additionally, because the natural productivity model incorporates climate variables, its predictions adjust to reflect what should be expected under current climatic conditions.
-
-Nevertheless, climate change creates interpretive nuances worth considering. In regions experiencing persistent climate shifts: prolonged drought in semi-arid zones, altered precipitation patterns, or temperature changes affecting growing seasons, observed productivity may decline for reasons related to regional climate trends rather than local land management. The EII does not currently distinguish between productivity reductions caused by climate change versus those caused by direct human degradation of the land surface. Both represent departures from historical ecosystem function, but they imply different response strategies. Users interpreting declining functional integrity trends in climate-sensitive regions should consider whether regional climate data supports a climate-driven explanation alongside or instead of local degradation hypotheses.
-
----
-
-## Structural Integrity: Configuration and Its Limits
-
-The structural integrity pillar assesses landscape fragmentation and habitat quality through a core area approach. That means, it is identifying interior habitat patches that are buffered from edge effects and weights them by their degree of human modification. This methodology captures important aspects of landscape ecology while necessarily simplifying others.
-
-### What Core Area Captures
-
-The core area approach reflects well-established ecological principles. Habitat edges experience altered microclimates, elevated predation pressure, invasion by disturbance-adapted species, and other effects that penetrate some distance into habitat patches. Small fragments may consist entirely of edge-affected habitat, while large contiguous areas maintain interior conditions that support species requiring undisturbed environments. By eroding habitat patches to identify core areas, the EII's structural pillar distinguishes between landscapes with equivalent total habitat area but different configurations; recognizing that one large intact patch generally supports greater ecological integrity than many small fragments totaling the same area.
-
-The 300-meter edge depth used in the calculation represents a reasonable central estimate based on ecological literature, where most documented edge effects occur within this distance. However, edge penetration varies considerably across ecosystem types and taxonomic groups. Tropical forests may experience edge effects extending 500 meters or more, while grassland edges may stabilize within 100-150 meters. The globally consistent parameterization chosen for the EII represents a principled compromise that performs reasonably across diverse ecosystems while acknowledging that region-specific edge depths might improve local accuracy.
-
-### The Connectivity Question
-
-Structural integrity as currently implemented measures landscape configuration -- the size, shape, and quality of habitat patches -- but does not directly assess functional connectivity between patches. Two landscapes could receive similar structural integrity scores while differing markedly in their connectivity: two large patches separated by 20 kilometers of inhospitable terrain versus two large patches 500 meters apart across a permeable agricultural matrix. Both landscapes contain equivalent core habitat area, but organisms' ability to move between patches differs substantially.
-
-This distinction matters because connectivity influences population viability, gene flow, and species' capacity to track shifting climates. Measuring functional connectivity rigorously requires species-specific information about dispersal abilities and matrix permeability; data that cannot feasibly be incorporated at global scale with current knowledge. The EII's structural pillar should therefore be understood as measuring habitat configuration and intactness rather than functional connectivity per se. For applications where connectivity is paramount, wildlife corridor planning, climate adaptation assessments, or population viability analyses, users should complement EII structural scores with dedicated connectivity modeling using species-specific parameters.
-
----
-
-## Relationships Among the Three Pillars
-
-A conceptual strength of the EII framework is its integration of three distinct dimensions of ecosystem health. In an ideal implementation, these pillars would capture independent information, with each contributing unique insight to the overall assessment. In practice, the pillars share some underlying drivers, creating correlations that warrant acknowledgment.
-
-Both structural integrity and compositional integrity are influenced by human pressure data: the Human Modification Index underlies structural calculations directly, while similar pressure variables inform the statistical models predicting biodiversity intactness. This shared causal pathway means these two pillars are not fully independent: landscapes with high human modification tend to score lower on both structural and compositional metrics. The functional pillar, derived from satellite observations of actual vegetation productivity, operates more independently, though it too responds to severe landscape modification.
-
-This correlation does not invalidate the three-pillar framework structure and composition remain conceptually distinct aspects of ecosystem health even if they respond to similar pressures. However, it suggests that the effective dimensionality of the EII may be somewhat less than three fully independent axes. For most applications, this consideration is minor: the framework still captures more ecosystem complexity than single-metric alternatives, and the different pillars respond at different rates to disturbance and recovery, providing complementary temporal signals.
-
----
-
-## Scale, Resolution, and Boundary Effects
-
-The EII operates at 300-meter resolution globally; a scale that represents careful balancing of competing considerations. Finer resolution would capture more local detail but would dramatically increase computational requirements for global coverage and introduce additional noise. Coarser resolution would smooth over meaningful local variation in ecosystem condition.
-
-At 300 meters, each pixel represents approximately nine hectares; sufficient to characterize landscape units meaningful for many management applications, but too coarse to resolve fine-scale features. Linear infrastructure like roads and power lines, small clearings, and narrow riparian corridors may fall below the resolution threshold. In landscapes with fine-grained heterogeneity, e.g. European agricultural mosaics, peri-urban interfaces, or regions with complex land tenure creating small management units, the 300-meter pixel may blend distinct conditions into intermediate values that don't precisely represent any actual land parcel.
-
-Boundary effects also merit consideration. At transitions between contrasting land covers, e.g. urban edges, forest-agriculture boundaries, coastlines, pixels may span multiple ecosystem types, creating scores that reflect the mixture rather than either component. For applications requiring precise site-level assessment, our proposal of a local modulation layer comes into play [to be documented]. In general, where applicable, aggregating EII scores to property or management unit boundaries often provides more robust characterization than individual pixel values.
-
----
-
-## Temporal Alignment and Lag Effects
-
-The three EII pillars integrate data from different temporal windows, reflecting the varying update frequencies of their underlying datasets. Functional integrity draws on satellite observations updated continuously, structural integrity uses human modification data updated periodically, and compositional integrity, as chosen for the first round of implementation, relies on biodiversity models with their own update cycles. For most landscapes, where conditions evolve gradually, this temporal spread creates minimal interpretation challenges.
-
-However, in locations undergoing rapid change, the pillars may temporarily reflect different time periods. A recently cleared forest might show collapsed productivity (current satellite data) while structural and compositional scores still reflect pre-clearance conditions from earlier datasets. This temporal asynchrony typically resolves within a few years as all data sources update, but users monitoring dynamic landscapes should recognize that pillar scores may temporarily disagree during transitional periods.
-
-A related consideration involves ecological time lags. Biodiversity responds to habitat change with delays that can span years to decades: the "extinction debt" phenomenon where species persist for some time after their habitat becomes unsuitable, and the "colonization credit" where species gradually accumulate following habitat improvement. The BII's design accounts for expected equilibrium conditions rather than transient states, meaning compositional scores may anticipate changes that have not yet fully manifested in actual species presence. This characteristic is both a strength (providing forward-looking assessment) and a limitation (potentially diverging from current realized conditions during transitions).
-
----
-
-## The Aggregation Philosophy
-
-The EII combines its three pillars using a "minimum with fuzzy logic" approach, reflecting the ecological principle that ecosystem health is constrained by its most degraded dimension. This aggregation philosophy is deliberately conservative: it prevents an ecosystem with severe degradation in one aspect from receiving high overall scores simply because other aspects remain intact. A productive monoculture plantation, for instance, might score well on functional integrity but would be penalized by low compositional scores, resulting in a modest overall EII.
-
-This design choice embeds a normative assumption that all three dimensions of ecosystem health matter, and that severe deficiency in any dimension represents meaningful degradation regardless of performance in other dimensions. For some applications, this assumption aligns well with user objectives. For others, particularly those focused on specific ecosystem services like carbon sequestration where functional integrity might be paramount, users may find value in examining pillar-level scores directly in addition to the aggregated index.
-
-The fuzzy logic component modulates the minimum-based aggregation, ensuring that ecosystems degraded across multiple dimensions receive lower scores than those degraded in only one. This refinement captures the intuition that cumulative degradation is worse than isolated problems, while maintaining the conservative property that no ecosystem can score higher than its lowest-performing pillar.
-
----
-
-## Guidance for Different Applications
-
-The EII performs differently across various use cases, and matching the index to appropriate applications maximizes its value while avoiding over-interpretation.
-
-For broad-scale monitoring and reporting, national or continental assessments, corporate portfolio screening, identification of priority regions, the EII provides valuable standardized comparisons across diverse landscapes. At these scales, individual pixel uncertainties average out, and the consistent methodology enables meaningful comparisons that would be difficult to achieve with heterogeneous local assessments.
-
-For regional conservation prioritization and landscape planning, the EII offers useful guidance when interpreted as relative ranking rather than absolute measurement. Comparing EII scores across candidate sites within a region provides defensible prioritization, even if absolute scores carry uncertainty. The pillar decomposition can inform strategy: regions where structural integrity lags might benefit from connectivity restoration, while those with low compositional scores might prioritize habitat protection for remnant biodiversity.
-
-For site-level assessment and project monitoring, the EII is best used as one input among several. The 300-meter resolution, temporal considerations, and inherent uncertainty in global models all suggest that high-stakes site-level decisions warrant local adaptaion, possibly ground-truthing and local expertise alongside EII scores.
-
-For restoration monitoring, users should recognize that the compositional pillar may respond slowly to habitat improvements due to ecological time lags and can, by design, only respond to recovery driven by mappable drivers (primarily threat reduction); but not, for example direct actions, such as, for example species reintroduction or anti-poaching activities. Functional integrity, with its continuous satellite observations, often provides earlier signals of ecosystem recovery. Tracking pillar-level trends separately, rather than relying solely on the aggregated index, can provide more nuanced understanding of restoration trajectories.
-
----
-
-## Ongoing Development and Future Directions
-
-The considerations outlined in this document inform an active research agenda aimed at strengthening future EII versions. Priorities include expanding the geographic and taxonomic coverage of biodiversity training data, improving temporal alignment across data sources, developing region-specific parameterizations where data support calibration, and implementing uncertainty quantification that communicates confidence levels alongside point estimates.
-
-We are also investigating approaches to better separate climate-driven productivity changes from land-management effects, exploring connectivity metrics that could complement the current configuration-based structural assessment, and working toward more frequent updates of all component layers. User feedback on which improvements would most benefit specific applications is welcome and informs development priorities.
-
-The EII represents our current best effort to provide globally consistent, scientifically grounded assessment of ecosystem integrity. Like all scientific tools, it will evolve as data improve and methods advance. We offer it in a spirit of transparency, acknowledging its limitations while believing it provides meaningful insight for the many users seeking to understand and improve ecosystem conditions worldwide.
-
----
+# Limitations and Interpretation
+
+EII condenses three dimensions of ecosystem condition into one globally consistent number. That
+requires choices and data that shape how the index should be read. This page sets out what the
+index measures, where it is weak, and how to use it for different purposes.
+
+## Functional integrity
+
+### A contemporary reference
+
+Potential NPP is learned from today's least modified land, observed in 2019 to 2025. It describes
+what natural vegetation produces under present conditions, including elevated CO₂, nitrogen
+deposition and recent climate, not a pre-industrial baseline. An ecosystem that matches its
+present-day natural potential scores 1 even if it once produced more.
+
+### Extrapolation into transformed regions
+
+Natural reference land is unevenly distributed. In regions with a long history of intensive use,
+such as Western Europe, South Asia or eastern China, few reference sites remain in the productive
+lowlands, and the model learns their potential partly from similar climates elsewhere. Held out as
+a whole, Europe is predicted with R² of 0.61 to 0.71, against 0.9 globally. Read functional
+integrity in such regions as an estimate informed by global relationships, not a locally
+calibrated benchmark.
+
+Where no natural semi-arid land is left at all (Sahel, Loess Plateau, semi-arid India), the
+training set is topped up with lightly used land (HMI < 0.2) at half weight. There, potential NPP
+partly describes lightly used rather than natural land.
+
+### Known model biases
+
+- Potential NPP is low in Mediterranean and tropical coniferous biomes and high in deserts (median
+  deviations of up to about 12 % per biome at held-out reference sites under block CV, up to
+  about 24 % when a whole realm is held out). The tolerance and recentring absorb part of this.
+- Wetlands and peatlands are overestimated, so their functional integrity tends to be too low.
+  The `wetland_flag` band marks them; use `exclude_wetlands=True` to leave them out of statistics.
+- On flat lowland the potential is a few percent lower than on adjacent moderate terrain, which
+  understates cropland losses on valley floors.
+- See the [model page](methodology/potential_npp.md#known-weaknesses) for details.
+
+### What functional integrity can detect
+
+The state score (FI_state) is 1 within a tolerance that covers model uncertainty and natural
+year-to-year variability; smaller deviations are not penalised. It responds to strong and lasting
+changes in productivity: conversion with lower or higher NPP, irrigation in drylands, severe
+degradation. A surplus is penalised less steeply than a deficit: where potential NPP is at least
+50 gC m⁻² yr⁻¹, FI_state reaches 0 at total loss, but only at three times the potential for a
+surplus. Below that floor deviations are measured in absolute terms (units of 50 gC), so a total
+loss of very low potential NPP can still score 1. Irrigated agriculture in true deserts,
+whose NPP is many times the 50 gC floor, still scores close to 0. Annual NPP does not separate
+many conversions in which crops and natural vegetation produce similar amounts.
+
+The change term (FI_change) responds to vegetation loss since the pixel's 2009-2018 baseline:
+clearing, fire, severe dieback. Its tolerance is set so that near-pristine land keeps FI of at
+least 0.9 in nine of ten cases, so small or partial losses within the noise of the EVI record
+are not penalised, and a loss is no longer seen once the vegetation has regrown to its baseline
+greenness. Land converted before the baseline and kept in the same use scores FI_change = 1.
+
+### Near 1 on most land, by design
+
+- Functional integrity is a productivity-anomaly measure. It is near 1 on most land by design:
+  in 2024 the observed-against-potential score is exactly 1 at 83 % of a global land sample, and
+  mean FI over land is 0.95.
+- With the change term, FI = FI_state × FI_change, FI also responds to vegetation loss for as
+  long as EVI stays below the pixel's baseline; it was evaluated on events up to six years old.
+  FI_change is below 0.9 on about 2 % of land and lowers mean EII by less than 0.003.
+- Long-standing conversion is carried by structural and compositional integrity. FI_change does
+  not respond to it, FI_state only where productivity departs strongly from the potential, and a
+  low FI on cropland should not be expected.
+- FI near 1 almost everywhere is a property of the measure, not a gap in the data: annual NPP of
+  long-used land is often similar to that of natural land, so a score that keeps intact land near
+  1 cannot also separate the two by productivity.
+
+### Satellite records behind the change term
+
+The change term depends on satellite records that are ending: MODIS Terra with VIIRS on Suomi
+NPP for reference years 2021-2025, Terra with VIIRS on NOAA-20 chained to Suomi NPP for 2026, and
+NOAA-20 alone from 2027. Suomi NPP stopped delivering data on 2 November 2026 and MODIS Terra is
+planned to stop around January 2027. NOAA-20 alone is noisier than two sensors, so FI_change
+flags more cells at the same tolerance. For a reference year in which no sensor has complete data
+for the window, FI equals FI_state (band `fi_change_sensors` = 0). The serving sensors are
+recorded per tile; compare FI across years with that in mind.
+
+On 3 % of land, mostly deserts, no sensor gives a change value, and FI equals FI_state. One
+sensor (mostly VIIRS) serves 12 % of land, more in cloudy tropical forest, tundra and mangroves.
+
+### Overlap with compositional integrity
+
+FI_change is not masked where forest loss is mapped. Compositional integrity can respond to the
+same clearing through the land-use maps behind Biodiversity Intactness, so a single recent event
+can lower two components. The aggregation then lowers EII more than for a loss in one component.
+
+### Special cases
+
+- **Irrigated drylands score close to 0, by design.** Irrigated cropland in a desert (Sindh, the
+  Nile valley and delta, canal-irrigated land in Egypt and Pakistan) produces many times the
+  potential of the surrounding desert. Functional integrity measures departure from natural
+  function, and the land has been replaced by a system of very different productivity, so F
+  near 0 means "replaced", not "degraded". This agrees with HANPP accounting, which also treats
+  NPP above the potential as human alteration.
+- **River floodplains are under-predicted.** The potential model sees local climate and
+  terrain but not water from upstream (upstream area is used only within 50 km of the coast).
+  The natural state of large dryland floodplains (Nile, Indus) was wetland and riverine
+  forest, far more productive than the climate predicts. There the surplus, and the low F, are
+  partly a model limitation rather than a measured change.
+- **Alpine meadows can read as surplus.** Productive meadows in the Pamir, Karakoram and on the
+  Tibetan Plateau exceed a potential learned from the mostly sparse plateau, although they are
+  near-pristine. The 1 km climate predictors cannot see the local water that makes them
+  productive.
+- **Bare rock and ice can read as deficit.** Where the potential model predicts some NPP on rock
+  or glaciers (Karakoram, Tibet), observed NPP of 0 scores as a deficit.
+
+### Biome-wide change is absorbed
+
+Potential NPP is recentred for each three-year window so that intact land of each biome sits at
+its potential. This removes drift in the satellite record and regional weather from the score. It
+also means that change uniform across a whole biome within one window, such as a continent-wide
+drought, does not lower functional integrity: the score measures function relative to intact land
+of the same biome in the same years.
+
+### Climate and land management
+
+Functional integrity does not separate productivity changes caused by climate from those caused
+by land management. Recentring absorbs biome-wide change in FI_state, but FI_change compares a
+pixel with its own baseline and has no such correction beyond the global drift factors. Its
+flags concentrate in drylands (North Africa, Iran and Afghanistan, Pakistan and northern India)
+and in fire regions, where much of the loss is likely drought or fire rather than land use. Where
+regional climate shifts persistently, check whether climate data support a climate-driven
+explanation before reading a decline as local degradation.
+
+## Structural integrity
+
+- **Pressure, not habitat.** HMI measures human pressure. Low-pressure land that is not natural
+  habitat, such as extensive pasture, counts by its low pressure, and small natural features
+  inside high-HMI pixels are not seen. Unmapped degradation, such as selective logging and forest
+  edges in the moist tropics, leaves structural integrity high.
+- **Calibrated against a bound.** The quality curve was chosen so that structural integrity does
+  not exceed a WorldCover land-cover bound, which itself overstates habitat (pasture and
+  plantations count as natural). The midpoint (HMI 0.4) is a judgement within that bound.
+- **Amount, not connectivity.** The landscape term measures how much good land lies near a pixel,
+  not whether organisms can move between patches. Connectivity analyses need species-specific
+  dispersal and matrix permeability.
+- **Static input.** HMI 2022 is used for every reference year, so structural integrity does not
+  register change after 2022.
+
+## Compositional integrity
+
+Biodiversity intactness is modelled from the PREDICTS database of biodiversity surveys. Surveys
+concentrate in Western Europe, North America and a few tropical research areas; elsewhere the
+model extrapolates. BII responds to mapped pressures (land conversion, intensity, roads,
+population) and cannot see unmapped ones such as hunting, invasive species or species
+reintroduction. It models the community expected under current pressure, so it can anticipate
+losses or gains that have not yet happened on the ground (extinction debt, colonisation credit).
+
+## Shared drivers of structure and composition
+
+Structural integrity is computed from human modification, and biodiversity intactness is modelled
+from similar pressure data. The two components are therefore correlated, and the effective
+dimensionality of EII is closer to two than three: a pressure signal (structure and composition)
+and a productivity signal (function). Functional integrity correlates only weakly with structure
+and limits EII mostly on otherwise intact land.
+
+## Annual change
+
+Year-to-year change in EII comes from observed NPP, EVI and biodiversity intactness; structural
+integrity is fixed at 2022.
+
+- The three-year windows of NPP and EVI mean each year shares two years with its neighbours.
+  Change between consecutive years is damped and lags real change by up to two years.
+- Small year-to-year changes in functional integrity at a pixel can come from weather within the
+  window and from the recentring factors. Trends over several years, and changes large enough to
+  cross the tolerance, are more reliable.
+- Compositional change follows the annual land-use inputs of the BII model.
+
+## Resolution and boundaries
+
+The grid spacing is 1/336°, so a pixel covers about 11 cos(latitude) ha (11 ha at the equator,
+7.8 ha at 45°). The effective resolution is coarser: the climate predictors are about 1 km, the
+change term uses 250-500 m MODIS and VIIRS EVI, and structural integrity averages over a
+neighbourhood of several kilometres. Single pixels should not be read on their own. Roads, small
+clearings and narrow riparian strips fall below the pixel size, and pixels at sharp boundaries (field edges, coastlines, urban fringes) mix both sides.
+Structural integrity is computed at about 300 m and potential NPP depends on 1 km climate layers,
+so its fine detail comes from terrain and observed NPP. Aggregating to a property, management
+unit or region is more robust than reading single pixels.
+
+## Aggregation
+
+The minimum with fuzzy sum treats every dimension as necessary: a severe deficit in one cannot be
+compensated by the others. This suits an overall condition assessment. For questions centred on
+one function, such as productivity or carbon uptake, also read the component layers and the
+`limiting_component` band.
+
+## Guidance by application
+
+- **National to continental reporting, portfolio screening.** EII gives consistent comparisons
+  across diverse landscapes; pixel errors average out over large areas.
+- **Regional prioritisation and planning.** Use EII as a relative ranking within a region. The
+  limiting component points at the dimension to address.
+- **Site assessment and project monitoring.** Use EII as one input among several, together with
+  local data and expertise. [Local modulation](methodology/local_modulation.md) adds plot-level
+  Natural Capital indicators.
+- **Restoration monitoring.** Track components separately. Functional integrity can respond
+  within a few years of recovery: FI_change returns to 1 once EVI regains its baseline level.
+  Compositional integrity follows the mapped pressures that drive BII; structural integrity
+  follows only once a new human-modification map is available.
 
 ## References
 
-Gassert, F., Mazzarello, J., & Hyde, S. (2022). Global 100m Projections of Biodiversity Intactness for the years 2017-2020. Impact Observatory Technical White Paper.
-
-Hill, S. L. L., Harrison, M. L. K., Maney, C., et al. (2022). The Ecosystem Integrity Index: a novel measure of terrestrial ecosystem integrity. *bioRxiv*. doi:10.1101/2022.08.21.504707
-
-Hudson, L. N., Newbold, T., Contu, S., et al. (2014). The PREDICTS database: a global database of how local terrestrial biodiversity responds to human impacts. *Ecology and Evolution*, 4(24), 4701-4732.
-
-Kennedy, C. M., et al. (2019). Managing the middle: A shift in conservation priorities based on the global human modification gradient. *Global Change Biology*, 25(3), 811-826.
-
-Miguet, P., et al. (2016). What determines the spatial extent of landscape effects on species? *Landscape Ecology*, 31(6), 1177-1194.
-
-Ries, L., et al. (2004). Ecological responses to habitat edges: mechanisms, models, and variability explained. *Annual Review of Ecology, Evolution, and Systematics*, 35, 491-522.
-
-Scholes, R. J., & Biggs, R. (2005). A biodiversity intactness index. *Nature*, 434(7029), 45-49.
-
-Theobald, D. M., et al. (2020). Earth transformed: detailed mapping of global human modification from 1990 to 2017. *Earth System Science Data*, 12, 1953-1972.
+- Hudson, L. N., et al. (2017). The database of the PREDICTS (Projecting Responses of Ecological
+  Diversity In Changing Terrestrial Systems) project. *Ecology and Evolution*, 7, 145-188.
+- Scholes, R. J., & Biggs, R. (2005). A biodiversity intactness index. *Nature*, 434, 45-49.

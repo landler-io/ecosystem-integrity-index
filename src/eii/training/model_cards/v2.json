@@ -1,0 +1,198 @@
+{
+  "model_id": "potential_npp_v2_olci_gapfill",
+  "version": "v2",
+  "response": "longterm_avg_npp_sum",
+  "response_units": "stored NPP; multiply by 1e-4 for gC m^-2 yr^-1",
+  "predictors": [
+    "mean_annual_temp",
+    "temp_seasonality",
+    "annual_precip",
+    "precip_seasonality",
+    "aridity",
+    "chelsa_npp",
+    "elevation",
+    "cti",
+    "tpi",
+    "northness",
+    "eastness",
+    "dist_coast",
+    "tidal_range",
+    "sss",
+    "log_upa_10km"
+  ],
+  "predictor_sources": {
+    "mean_annual_temp": "CHELSA V2.1 1981-2010 bio1, deg C (gs://landler-opendata-gee-assets/datasets/chelsa_bio1/v1_0, CC0 1.0)",
+    "temp_seasonality": "CHELSA V2.1 1981-2010 bio4 (gs://landler-opendata-gee-assets/datasets/chelsa_bio4/v1_0, CC0 1.0)",
+    "annual_precip": "CHELSA V2.1 1981-2010 bio12, mm, saturates at 6553.5 (gs://landler-opendata-gee-assets/datasets/chelsa_bio12/v1_0, CC0 1.0)",
+    "precip_seasonality": "CHELSA V2.1 1981-2010 bio15 (gs://landler-opendata-gee-assets/datasets/chelsa_bio15/v1_0, CC0 1.0)",
+    "aridity": "CHELSA V2.1 1981-2010 bio12 / (12 x pet_penman_mean), unitless (gs://landler-opendata-gee-assets/datasets/chelsa_pet_penman_mean/v1_0, CC0 1.0)",
+    "chelsa_npp": "projects/landler-open-data/assets/datasets/chelsa/npp/chelsa_npp_1981_2010_v2-1",
+    "elevation": "MERIT/DEM/v1_0_3",
+    "cti": "projects/sat-io/open-datasets/Geomorpho90m/cti",
+    "tpi": "projects/sat-io/open-datasets/Geomorpho90m/tpi",
+    "northness": "projects/sat-io/open-datasets/Geomorpho90m/northness",
+    "eastness": "projects/sat-io/open-datasets/Geomorpho90m/eastness",
+    "dist_coast": "projects/landler-open-data/assets/datasets/osm_coast_distance/v1_0 (OSM coastline, ODbL 1.0), km capped at 50",
+    "tidal_range": "projects/landler-open-data/assets/datasets/eot20_tidal_range/v1_0 (EOT20, CC BY 4.0), 0 beyond 50 km of coast, capped at 16 m",
+    "sss": "projects/landler-open-data/assets/datasets/woa23_sss/v1_0 (WOA23 1991-2020), 0 beyond 50 km of coast",
+    "log_upa_10km": "MERIT/Hydro/v1_0_1 upa: log10(1 + 10 km focal max of 1 km max), 0 beyond 50 km of coast"
+  },
+  "hyperparameters": {
+    "mean_model": {
+      "class": "lightgbm.LGBMRegressor",
+      "file": "lgbm_mean.txt",
+      "objective": "tweedie",
+      "tweedie_variance_power": 1.35,
+      "learning_rate": 0.03,
+      "n_estimators": 3000,
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "colsample_bytree": 0.8,
+      "subsample": 1.0,
+      "subsample_freq": 1,
+      "reg_lambda": 0.0,
+      "random_state": 42
+    },
+    "bias_correction_c": 1.0203341540815911,
+    "interval_model": {
+      "class": "quantile_forest.RandomForestQuantileRegressor",
+      "file": "qrf.joblib",
+      "n_estimators": 200,
+      "min_samples_leaf": 5,
+      "max_features": 5,
+      "max_samples": 0.7,
+      "quantiles": [
+        0.05,
+        0.16,
+        0.5,
+        0.84,
+        0.95
+      ],
+      "random_state": 42
+    },
+    "intervals": {
+      "design": "norm_asym",
+      "calibration": "per-biome split conformal on block-CV OOF predictions (biomes with < 50 rows use the pooled factor)",
+      "levels": [
+        68,
+        90
+      ],
+      "eps_gc": 1.0
+    },
+    "interannual_cv_model": {
+      "class": "lightgbm.LGBMRegressor",
+      "file": "lgbm_interannual_cv.txt",
+      "objective": "tweedie",
+      "tweedie_variance_power": 1.35,
+      "learning_rate": 0.03,
+      "n_estimators": 1000,
+      "num_leaves": 15,
+      "min_child_samples": 100,
+      "colsample_bytree": 0.8,
+      "subsample": 0.8,
+      "reg_lambda": 1.0,
+      "c": 0.9912604419883164,
+      "n_train": 103683
+    },
+    "sample_weight": {
+      "reference": 1.0,
+      "gap_fill": 0.5
+    }
+  },
+  "training_asset": "gs://landler-opendata-gee-assets/products/eii/v2_0/training/npp_training_samples_v2_wp11_localstack_dmpv2_olci_20261104.csv.gz (requester pays)",
+  "n_train": 151376,
+  "sampling_design": {
+    "response_dataset": "CLMS DMP 300 m V2.0.2, annual NPP sums 2019-2025 (OLCI years), pipelines/preprocessing/npp",
+    "response": "mean annual NPP, at least 5 of 7 valid years",
+    "reference": "Pristine reference sites: max HMI 1990-2020 < 0.1 outside a 3 km buffer around HMI > 0.4, or WDPA strict protection (142,480 rows with complete predictors)",
+    "gap_fill": {
+      "function": "eii.training.sampling.gap_fill",
+      "min_reference": 40,
+      "hmi_2022_max": 0.2,
+      "weight": 0.5,
+      "stratum": "4-degree block x aridity class",
+      "n_rows": 8896
+    }
+  },
+  "validation": {
+    "protocol": "30,000 scored rows, 4-degree block CV with 1-degree buffer, leave-realm-out",
+    "block_4deg_buffered": {
+      "raw": {
+        "r2": 0.9064,
+        "within_4deg_r2": 0.4996,
+        "bias_pct": -1.9929,
+        "biome_bias_mean_abs": 0.0504,
+        "biome_bias_max_abs": 0.1407
+      },
+      "corrected": {
+        "r2": 0.9061,
+        "within_4deg_r2": 0.4973,
+        "bias_pct": 0.0002,
+        "biome_bias_mean_abs": 0.0477,
+        "biome_bias_max_abs": 0.1249
+      }
+    },
+    "leave_realm_out": {
+      "raw": {
+        "r2": 0.8673,
+        "within_4deg_r2": 0.4234,
+        "bias_pct": -4.9606,
+        "biome_bias_mean_abs": 0.1363,
+        "biome_bias_max_abs": 0.2966
+      },
+      "corrected": {
+        "r2": 0.8608,
+        "within_4deg_r2": 0.4123,
+        "bias_pct": 0.4413,
+        "biome_bias_mean_abs": 0.1174,
+        "biome_bias_max_abs": 0.2374
+      }
+    },
+    "intervals_norm_asym": {
+      "block_4deg_buffered": {
+        "68": {
+          "coverage": 0.6797,
+          "coverage_min_biome": 0.674
+        },
+        "90": {
+          "coverage": 0.8995,
+          "coverage_min_biome": 0.894
+        }
+      },
+      "leave_realm_out": {
+        "68": {
+          "coverage": 0.6984,
+          "coverage_min_biome": 0.6358
+        },
+        "90": {
+          "coverage": 0.8958,
+          "coverage_min_biome": 0.8642
+        }
+      }
+    },
+    "checks": {
+      "leave_biome_out_bias_pct_corrected": {
+        "Temperate broadleaf": -9.05,
+        "Tropical dry broadleaf": -6.79,
+        "Temperate grassland": -3.62,
+        "Mediterranean": -8.78
+      },
+      "control_rel_npp_biomes_within_0.9_1.1": "11 of 14",
+      "n_controls": 18174
+    }
+  },
+  "created": "2026-11-08T12:55:58+00:00",
+  "notes": [
+    "This card is the single source of eii.training.settings.PREDICTOR_VARIABLES.",
+    "Predictors: CHELSA bioclim (4), aridity, CHELSA NPP, elevation, CTI, TPI, northness and eastness, plus the coastal group (dist_coast, tidal_range, sss, log_upa_10km).",
+    "Potential NPP = c x mean model, with c = sum(A) / sum(P) on the block-CV out-of-fold predictions. Intervals scale the QRF quantile spread per biome by split conformal (norm_asym).",
+    "Response values in the training table are stored NPP (x1e-4 for gC m-2 yr-1); the published rasters are in gC m-2 yr-1.",
+    "Fitted by pipelines/training/fit_potential_npp_v2.py; inference with pipelines/training/predict_potential_npp_v2.py."
+  ],
+  "companion_models": {
+    "interval_model": "qrf.joblib",
+    "interannual_cv_model": "lgbm_interannual_cv.txt",
+    "model_dir": "output directory of pipelines/training/fit_potential_npp_v2.py",
+    "predictions": "projects/landler-open-data/assets/products/eii/v2_0/intermediate/functional/potential_npp_olci_gapfill"
+  }
+}

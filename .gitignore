@@ -100,8 +100,11 @@ Thumbs.db
 *.tiff
 data/
 outputs/
+!pipelines/validation/outputs/
 results/
 *.log
+
+/work/
 
 # Secrets
 .env.local

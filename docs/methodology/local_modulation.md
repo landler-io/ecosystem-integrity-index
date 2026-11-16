@@ -1,6 +1,6 @@
 # Local Modulation (Natural Capital)
 
-**Local Modulation** adjusts the base Ecosystem Integrity Index (EII) using plot-level **Natural Capital (NC)** performance. It adds three dimensions, namely biodiversity, soil, and water as KPIs, combines them into an NC score, and shifts EII by up to ±0.05. This keeps a shared structure (the same three dimensions everywhere) while allowing each ecosystem to use the most relevant KPIs within those dimensions, for example, habitat fraction for biodiversity in forests or water table depth for peatlands. In the follwing we describe the approach, follwed up by an implemented example of how it works in practice.
+**Local Modulation** adjusts the base Ecosystem Integrity Index (EII) using plot-level **Natural Capital (NC)** performance. It adds three dimensions, namely biodiversity, soil, and water as KPIs, combines them into an NC score, and shifts EII by up to ±0.05. This keeps a shared structure (the same three dimensions everywhere) while allowing each ecosystem to use the most relevant KPIs within those dimensions, for example, habitat fraction for biodiversity in forests or water table depth for peatlands. Below we describe the approach, followed by an implemented example of how it works in practice.
 
 ## Modulation Formula
 
@@ -8,7 +8,8 @@ The modulated EII is:
 
 $$ EII_{mod} = EII + (NC - 0.5) \times R $$
 
-where \(R\) is the modulation range (default 0.1). The result is clamped to \([0, 1]\).
+where \(R\) is the modulation range (default 0.1). The result is clamped to \([0, 1]\). Where
+the KPI layers have no data, mainly on sealed surfaces, NC is 0.5 and EII is unchanged.
 
 - **NC = 0** → EII decreases by 0.05
 - **NC = 0.5** → EII unchanged
@@ -38,9 +39,9 @@ get_modulated_eii(
     kpis=None,
     kpi_layers=None,
     compute_default_kpis=False,
-    aggregation_method="min_fuzzy_logic",
-    compute_mode="precomputed",
     include_components=True,
+    version=None,
+    reference_year=None,
     kpi_weights=None,
     modulation_range=0.1,
     biodiversity_max_threshold=0.5,
@@ -200,6 +201,8 @@ Values near the texture-specific maximum map to 1.
 
 ## Usage Examples
 
+The examples use the default dataset, EII v2 (see [Getting Started](../getting-started.md)). Modulation works on any reference year; pass `reference_year` explicitly for reproducible results.
+
 **Modulated EII with default KPIs (GEE):**
 
 ```python
@@ -209,7 +212,7 @@ from eii.client import get_modulated_eii
 ee.Initialize()
 aoi = ee.Geometry.Rectangle([10.5, 47.5, 11.0, 48.0])
 
-result = get_modulated_eii(aoi, compute_default_kpis=True)
+result = get_modulated_eii(aoi, reference_year=2024, compute_default_kpis=True)
 print(f"Base EII:      {result['values']['eii']['mean']:.3f}")
 print(f"Modulated EII: {result['values']['eii_modulated']['mean']:.3f}")
 print(f"NC score:      {result['values']['nc_score']['mean']:.3f}")
@@ -218,7 +221,9 @@ print(f"NC score:      {result['values']['nc_score']['mean']:.3f}")
 **Pre-computed KPIs:**
 
 ```python
-result = get_modulated_eii(aoi, kpis={"biodiversity": 0.45, "soil": 0.62, "water": 0.38})
+result = get_modulated_eii(
+    aoi, reference_year=2024, kpis={"biodiversity": 0.45, "soil": 0.62, "water": 0.38}
+)
 ```
 
 **KPI rasters for mapping or custom aggregation:**
@@ -229,7 +234,9 @@ from eii.client import get_kpi_layers
 layers = get_kpi_layers(aoi)
 # layers["biodiversity"], layers["soil"], layers["water"] are ee.Image (0–1)
 
-result = get_modulated_eii(aoi, kpi_layers=layers, output_format="geodataframe")
+result = get_modulated_eii(
+    aoi, reference_year=2024, kpi_layers=layers, output_format="geodataframe"
+)
 ```
 
 **Only the NC score:**

@@ -1,22 +1,23 @@
 """
 Ecosystem Integrity Index (EII)
 
-A Python package for accessing and computing the Ecosystem Integrity Index,
-a global measure of ecosystem condition based on deviation from natural
-potential Net Primary Productivity (NPP).
+A Python package for accessing and computing the Ecosystem Integrity Index, a global 0-1
+measure of ecosystem condition that combines functional, structural and compositional
+integrity (1 = fully intact).
 
 Submodules:
-    - eii.client: Lightweight retrieval of pre-computed EII from GEE assets
-    - eii.compute: Full EII calculation from scratch
-    - eii.training: Model training utilities (optional dependencies)
+    - eii.client: Retrieval of the published EII from Earth Engine assets
+    - eii.compute: The v2 calculation as numpy functions (optional dependencies)
+    - eii.training: Potential-NPP model training utilities (optional dependencies)
+    - eii.modulation: Natural Capital modulation of EII
 
 Quick Start:
     >>> import ee
-    >>> from eii.client import get_eii_for_polygon
+    >>> from eii.client import get_stats
     >>>
     >>> ee.Initialize()
     >>> polygon = ee.Geometry.Rectangle([-60, -10, -55, -5])
-    >>> stats = get_eii_for_polygon(polygon)
+    >>> stats = get_stats(polygon)
 """
 
 try:

@@ -28,7 +28,7 @@ What actually happened.
 
 - OS: [e.g., Ubuntu 22.04, macOS 14, Windows 11]
 - Python version: [e.g., 3.11.5]
-- Package version: [e.g., 0.1.0]
+- Package version: [e.g., 2.0.0]
 - Earth Engine API version: [e.g., 0.1.380]
 
 ## Additional Context

@@ -1,11 +1,9 @@
 """
-Central configuration loader for the EII package.
+Earth Engine deployment settings of the EII package.
 
-This module reads the project-level `config.yaml` to establish:
-1. GEE Project and Asset Root paths.
-2. Project Version.
-
-It serves as the single source of truth for "Deployment" settings.
+In a source checkout, the ``gee`` block of the project-level ``config.yaml`` sets the Earth
+Engine project, the root of the v1 asset paths and the default dataset version. Installed
+wheels do not ship ``config.yaml`` and use the built-in defaults below.
 """
 
 from pathlib import Path
@@ -32,4 +30,4 @@ _gee_config = _config.get("gee", {})
 # Public Constants
 GEE_PROJECT = _gee_config.get("project", "landler-open-data")
 EII_ASSET_ROOT = _gee_config.get("asset_root", "projects/landler-open-data/assets/eii")
-VERSION = _gee_config.get("version", "v1")
+VERSION = _gee_config.get("version", "v2")

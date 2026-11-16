@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 import ee
 
-from eii.compute.modulation import (
+from eii.modulation import (
     BIODIVERSITY_MAX_THRESHOLD,
     MODULATION_RANGE,
     apply_modulation,
@@ -27,8 +27,6 @@ from eii.compute.modulation import (
 from .retrieve import get_layers, get_stats
 from .utils import normalize_client_input
 
-AggregationMethod = Literal["min_fuzzy_logic", "minimum", "product", "geometric_mean"]
-ComputeMode = Literal["precomputed", "on_the_fly"]
 OutputFormat = Literal["dict", "geodataframe"]
 
 
@@ -37,9 +35,9 @@ def get_modulated_eii(
     kpis: dict[str, float] | None = None,
     kpi_layers: dict[str, ee.Image] | None = None,
     compute_default_kpis: bool = False,
-    aggregation_method: AggregationMethod = "min_fuzzy_logic",
-    compute_mode: ComputeMode = "precomputed",
     include_components: bool = True,
+    version: str | None = None,
+    reference_year: int | None = None,
     kpi_weights: dict[str, float] | None = None,
     modulation_range: float = MODULATION_RANGE,
     biodiversity_max_threshold: float = BIODIVERSITY_MAX_THRESHOLD,
@@ -67,9 +65,9 @@ def get_modulated_eii(
         kpi_layers: User-provided ee.Image layers (must be normalized 0-1)
             with keys "biodiversity", "soil", "water"
         compute_default_kpis: If True, compute KPIs from built-in GEE datasets
-        aggregation_method: EII aggregation method
-        compute_mode: "precomputed" or "on_the_fly" for base EII
         include_components: Include EII component layers in output
+        version: EII dataset version; defaults to the active session version
+        reference_year: v2 reference year, defaults to the latest; see ``get_layers``
         kpi_weights: Custom KPI weights (must sum to 1.0)
         modulation_range: Total modulation range (default 0.1 = ±0.05)
         biodiversity_max_threshold: Upper threshold for biodiversity KPI
@@ -109,13 +107,13 @@ def get_modulated_eii(
 
     base_result = get_stats(
         geometry=geometry,
-        aggregation_method=aggregation_method,
         include_components=include_components,
         scale=scale,
         stats=stats,
         percentiles=percentiles,
-        compute_mode=compute_mode,
         output_format="dict",
+        version=version,
+        reference_year=reference_year,
     )
 
     if kpis is not None:
@@ -152,6 +150,8 @@ def get_modulated_eii(
             scale=scale,
             stats=stats,
             percentiles=percentiles,
+            version=version,
+            reference_year=reference_year,
         )
 
     else:
@@ -168,6 +168,8 @@ def get_modulated_eii(
             scale=scale,
             stats=stats,
             percentiles=percentiles,
+            version=version,
+            reference_year=reference_year,
         )
 
     if output_format == "geodataframe":
@@ -217,7 +219,7 @@ def get_default_kpis(
             maxPixels=1e12,
         ).getInfo()
 
-        kpi_values[name] = value.get(f"{name}_kpi") or value.get(name)
+        kpi_values[name] = value.get(f"{name}_kpi", value.get(name))
 
     return kpi_values
 
@@ -356,19 +358,27 @@ def _compute_modulation_from_layers(
     scale: int,
     stats: list[str],
     percentiles: list[int] | None,
+    version: str | None,
+    reference_year: int | None,
 ) -> dict:
     """Compute modulation from KPI raster layers."""
     from .retrieve import _build_reducer, _format_stats
 
-    nc_image = calculate_nc_score_image(
-        biodiversity_kpi=kpi_images["biodiversity"],
-        soil_kpi=kpi_images["soil"],
-        water_kpi=kpi_images["water"],
-        weights=kpi_weights,
-    )
-
-    layers = get_layers(layers="eii", compute_mode="precomputed")
+    layers = get_layers(layers="eii", version=version, reference_year=reference_year)
     eii_base = layers["eii"]
+
+    # Pixels without KPI data (SoilGrids leaves sealed surfaces empty) get the neutral
+    # NC score, so modulated and base EII are reduced over the same pixels.
+    nc_image = (
+        calculate_nc_score_image(
+            biodiversity_kpi=kpi_images["biodiversity"],
+            soil_kpi=kpi_images["soil"],
+            water_kpi=kpi_images["water"],
+            weights=kpi_weights,
+        )
+        .unmask(0.5)
+        .updateMask(eii_base.mask())
+    )
 
     eii_modulated = apply_modulation_image(
         eii=eii_base,

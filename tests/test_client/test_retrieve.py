@@ -13,6 +13,7 @@ from eii.client.retrieve import (
     get_raster,
     get_stats,
 )
+from eii.compute.settings import REFERENCE_YEARS
 
 
 class TestRetrieve:
@@ -59,11 +60,21 @@ class TestRetrieve:
         layers = get_layers(layers="components")
         assert "eii" not in layers and "functional" in layers
 
-        # Mode restrictions
-        with pytest.raises(ValueError, match="pre-computed default method"):
-            get_layers(aggregation_method="minimum", compute_mode="precomputed")
-        with pytest.raises(ValueError):
-            get_layers(compute_mode="invalid")
+        # v2 is annual: reference_year defaults to the latest year and is rejected for v1
+        latest = get_layers(version="v2")["eii"]
+        assert f'"constantValue": {REFERENCE_YEARS[-1]}' in latest.serialize()
+        with pytest.raises(ValueError, match="reference_year"):
+            get_layers(version="v2", reference_year=2019)
+        with pytest.raises(ValueError, match="applies to version"):
+            get_layers(version="v1", reference_year=2024)
+        v2 = get_layers(layers="all", version="v2", reference_year=2024)
+        assert {"limiting_component", "wetland_flag"} <= set(v2)
+
+        # FI change bands (v2.0): the sensor count is cast to uint8 in the client
+        fc = get_layers(layers="fi_change", version="v2", reference_year=2024)
+        assert set(fc) == {"fi_state", "fi_change", "fi_change_sensors"}
+        assert "Image.toUint8" in fc["fi_change_sensors"].serialize()
+        assert "Image.toUint8" not in fc["fi_change"].serialize()
 
     def test_get_stats_polygon(self, amazon_small_polygon):
         """Test comprehensive stats extraction for polygon."""

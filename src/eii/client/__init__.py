@@ -18,7 +18,14 @@ For Natural Capital modulated EII:
 """
 
 from .analysis import compare_methods, get_zonal_stats
-from .assets import ASSETS, get_asset_path
+from .assets import (
+    ASSETS,
+    get_asset_info,
+    get_asset_path,
+    get_version,
+    set_version,
+    use_version,
+)
 from .modulation import (
     get_default_kpis,
     get_kpi_layers,
@@ -43,6 +50,11 @@ __all__ = [
     # Utilities
     "quicklook",
     "normalize_client_input",
+    # Dataset version selection
     "ASSETS",
     "get_asset_path",
+    "get_asset_info",
+    "get_version",
+    "set_version",
+    "use_version",
 ]
